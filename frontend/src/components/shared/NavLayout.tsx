@@ -1,4 +1,4 @@
-import { logout, getUser } from "../lib/auth";
+import { logout, getUser } from "../../lib/auth";
 
 interface Props {
   titulo: string;
