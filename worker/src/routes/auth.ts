@@ -6,25 +6,18 @@ const route = new Hono<{ Bindings: Env }>();
 
 // Inicializar BD con el schema
 route.post("/init", async (c) => {
-  const db = getDB(c.env);
-  const statements = SCHEMA.split(";").filter((s) => s.trim());
-  for (const sql of statements) {
-    await db.execute(sql);
+  try {
+    const db = getDB(c.env);
+    const statements = SCHEMA.split(";").filter((s) => s.trim());
+    for (const sql of statements) {
+      await db.execute(sql);
+    }
+    await db.execute(`INSERT OR IGNORE INTO usuarios (nombre, email, password_hash, rol) VALUES ('Administrador', 'admin@caja.com', 'admin123', 'admin')`);
+    await db.execute(`INSERT OR IGNORE INTO unidades (id, nombre, abreviatura) VALUES (1, 'Unidad', 'u'), (2, 'Pieza', 'pza'), (3, 'Cuartilla', 'crt'), (4, 'Arroba', 'arr')`);
+    return c.json({ ok: true, mensaje: "Base de datos inicializada" });
+  } catch (e: any) {
+    return c.json({ error: e.message, stack: e.stack }, 500);
   }
-  // Insertar usuario admin por defecto si no existe
-  await db.execute(`
-    INSERT OR IGNORE INTO usuarios (nombre, email, password_hash, rol)
-    VALUES ('Administrador', 'admin@caja.com', 'admin123', 'admin')
-  `);
-  // Insertar unidades por defecto
-  await db.execute(`
-    INSERT OR IGNORE INTO unidades (id, nombre, abreviatura) VALUES
-    (1, 'Unidad', 'u'),
-    (2, 'Pieza', 'pza'),
-    (3, 'Cuartilla', 'crt'),
-    (4, 'Arroba', 'arr')
-  `);
-  return c.json({ ok: true, mensaje: "Base de datos inicializada" });
 });
 
 // Login
