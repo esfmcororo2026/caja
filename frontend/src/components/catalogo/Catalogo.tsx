@@ -39,8 +39,8 @@ export default function Catalogo() {
   }
 
   async function deleteCodigo(id: number) {
-    if (!confirm("¿Archivar este código?")) return;
-    await api.delete(`/codigos/${id}`); loadAll(); notify("Archivado ✓");
+    if (!confirm("¿Eliminar este código?")) return;
+    await api.delete(`/codigos/${id}`); loadAll(); notify("Eliminado ✓");
   }
 
   // --- CATEGORIAS ---
@@ -153,7 +153,7 @@ export default function Catalogo() {
                   <td style={{ padding: "0.75rem", textAlign: "center" }}>{c.tiene_stock ? "✅" : "—"}</td>
                   <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
                     <button style={btnStyle("#2196F3")} onClick={() => { setForm({ ...c, tiene_numeracion: !!c.tiene_numeracion, tiene_precio: !!c.tiene_precio, tiene_stock: !!c.tiene_stock }); setEditId(c.id); }}>Editar</button>
-                    <button style={btnStyle("#f44336")} onClick={() => deleteCodigo(c.id)}>Archivar</button>
+                    <button style={btnStyle("#f44336")} onClick={() => deleteCodigo(c.id)}>Eliminar</button>
                   </td>
                 </tr>
               ))}</tbody>
