@@ -5,8 +5,3 @@ account_id = "1053ecbfebc296455f00bfccdc2bbee2"
 
 [vars]
 ENVIRONMENT = "production"
-
-[secrets]
-TURSO_URL = ""
-TURSO_AUTH_TOKEN = ""
-JWT_SECRET = ""
