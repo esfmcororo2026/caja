@@ -39,18 +39,23 @@ route.get("/items", async (c) => {
 route.post("/items", async (c) => {
   try {
     const { nombre, codigo_id, categoria_id, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin } = await c.req.json();
+    if (!nombre || !categoria_id || !unidad_id) {
+      return c.json({ error: "Faltan campos requeridos" }, 400);
+    }
     let stockCalc = stock_actual || 0;
     let numActual = null;
     if (numeracion_inicio && numeracion_fin) {
       stockCalc = numeracion_fin - numeracion_inicio + 1;
       numActual = numeracion_inicio;
     }
+    const finalCodigoId = codigo_id && codigo_id > 0 ? codigo_id : null;
     const r = await query(c.env,
       "INSERT INTO items (nombre, codigo_id, categoria_id, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin, numeracion_actual) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [nombre, codigo_id || null, categoria_id, precio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, numActual]
+      [nombre, finalCodigoId, categoria_id, precio || 0, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, numActual]
     );
     return c.json({ id: r.lastInsertRowid });
   } catch (e: any) {
+    console.error("Error creating item:", e);
     return c.json({ error: e.message }, 500);
   }
 });

@@ -65,8 +65,12 @@ export default function Catalogo() {
   const codigoSeleccionado = codigos.find(c => c.id === Number(form.codigo_id));
 
   async function saveItem() {
-    if (editId) await api.put(`/catalogo/items/${editId}`, { ...form, usuario_id: 1 });
-    else await api.post("/catalogo/items", form);
+    const itemData = { ...form };
+    if (!itemData.codigo_id || itemData.codigo_id === 0) {
+      delete itemData.codigo_id;
+    }
+    if (editId) await api.put(`/catalogo/items/${editId}`, { ...itemData, usuario_id: 1 });
+    else await api.post("/catalogo/items", itemData);
     resetForm(); loadAll(); notify("Guardado ✓");
   }
 
