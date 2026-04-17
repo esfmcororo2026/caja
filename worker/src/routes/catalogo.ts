@@ -28,8 +28,12 @@ route.delete("/categorias/:id", async (c) => {
 });
 
 route.get("/items", async (c) => {
-  const r = await query(c.env, "SELECT i.*, c.nombre as categoria, u.nombre as unidad_nombre, u.abreviatura, cd.nombre as codigo_nombre, cd.tiene_numeracion as cod_tiene_numeracion, cd.tiene_precio as cod_tiene_precio FROM items i JOIN categorias c ON i.categoria_id = c.id JOIN unidades u ON i.unidad_id = u.id LEFT JOIN codigos cd ON i.codigo_id = cd.id WHERE i.activo = 1");
-  return c.json(r.rows);
+  try {
+    const r = await query(c.env, "SELECT i.*, c.nombre as categoria, u.nombre as unidad_nombre, u.abreviatura FROM items i JOIN categorias c ON i.categoria_id = c.id JOIN unidades u ON i.unidad_id = u.id WHERE i.activo = 1");
+    return c.json(r.rows);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
 });
 
 route.post("/items", async (c) => {
