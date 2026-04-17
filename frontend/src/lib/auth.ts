@@ -1,4 +1,5 @@
 export function getUser() {
+  if (typeof window === "undefined") return null;
   const token = localStorage.getItem("token");
   if (!token) return null;
   try {
@@ -15,6 +16,7 @@ export function getUser() {
 }
 
 export function logout() {
+  if (typeof window === "undefined") return;
   localStorage.removeItem("token");
   window.location.href = "/caja/";
 }
