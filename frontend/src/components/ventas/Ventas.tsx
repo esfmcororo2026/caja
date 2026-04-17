@@ -65,7 +65,7 @@ export default function Ventas() {
       <p><b>Recibo #${ventaOk.id}</b></p>
       <p>Cliente: ${ventaOk.cliente}</p>
       <p>Fecha: ${ventaOk.fecha}</p><hr/>
-      <table>${ventaOk.carrito.map((i: any) => `<tr><td>${i.nombre}</td><td>${i.cantidad} ${i.unidad}</td><td>Bs. ${i.subtotal.toFixed(2)}</td></tr>`).join("")}</table>
+      <table>${ventaOk.carrito.map((i: any) => `<tr><td><b>${i.nombre}</b></td><td>${i.cantidad} ${i.unidad}</td><td>Bs. ${i.subtotal.toFixed(2)}</td></tr>${i.num_desde ? `<tr><td colspan="3" style="font-size:0.85em;color:#555">&nbsp;&nbsp;Nums: ${i.num_desde} al ${i.num_hasta}</td></tr>` : ""}`).join("")}</table>
       <hr/><p class="total">TOTAL: Bs. ${ventaOk.total.toFixed(2)}</p>
       <hr/><p>¡Gracias!</p></body></html>
     `);

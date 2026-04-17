@@ -33,16 +33,32 @@ CREATE TABLE IF NOT EXISTS unidades (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS codigos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  descripcion TEXT,
+  tiene_numeracion INTEGER DEFAULT 0,
+  tiene_precio INTEGER DEFAULT 1,
+  tiene_stock INTEGER DEFAULT 1,
+  activo INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT NOT NULL,
+  codigo_id INTEGER,
   categoria_id INTEGER NOT NULL,
   precio REAL NOT NULL,
   unidad_id INTEGER NOT NULL,
   tiene_stock INTEGER DEFAULT 1,
   stock_actual REAL DEFAULT 0,
+  numeracion_inicio INTEGER,
+  numeracion_fin INTEGER,
+  numeracion_actual INTEGER,
   activo INTEGER DEFAULT 1,
   created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (codigo_id) REFERENCES codigos(id),
   FOREIGN KEY (categoria_id) REFERENCES categorias(id),
   FOREIGN KEY (unidad_id) REFERENCES unidades(id)
 );
@@ -77,6 +93,8 @@ CREATE TABLE IF NOT EXISTS detalle_ventas (
   precio_unitario REAL NOT NULL,
   subtotal REAL NOT NULL,
   unidad_id INTEGER NOT NULL,
+  numeracion_desde INTEGER,
+  numeracion_hasta INTEGER,
   FOREIGN KEY (venta_id) REFERENCES ventas(id),
   FOREIGN KEY (item_id) REFERENCES items(id),
   FOREIGN KEY (unidad_id) REFERENCES unidades(id)
