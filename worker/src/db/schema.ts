@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS unidades (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT NOT NULL,
   abreviatura TEXT NOT NULL,
+  activo INTEGER DEFAULT 1,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
