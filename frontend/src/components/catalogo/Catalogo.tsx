@@ -3,6 +3,8 @@ import { requireAuth } from "../../lib/auth";
 import { api } from "../../lib/api";
 import NavLayout from "../shared/NavLayout";
 
+const toUpperCase = (str: string) => str ? str.toUpperCase() : "";
+
 export default function Catalogo() {
   const [tab, setTab] = useState<"codigos" | "categorias" | "unidades" | "items">("codigos");
   const [codigos, setCodigos] = useState<any[]>([]);
@@ -33,56 +35,59 @@ export default function Catalogo() {
 
   // --- CODIGOS ---
   async function saveCodigo() {
-    if (editId) await api.put(`/codigos/${editId}`, form);
-    else await api.post("/codigos", form);
-    resetForm(); loadAll(); notify("Guardado ✓");
+    const data = { ...form, nombre: toUpperCase(form.nombre), descripcion: toUpperCase(form.descripcion) };
+    if (editId) await api.put(`/codigos/${editId}`, data);
+    else await api.post("/codigos", data);
+    resetForm(); loadAll(); notify("GUARDADO ✓");
   }
 
   async function deleteCodigo(id: number) {
-    if (!confirm("¿Eliminar este código?")) return;
-    await api.delete(`/codigos/${id}`); loadAll(); notify("Eliminado ✓");
+    if (!confirm("¿ELIMINAR ESTE CÓDIGO?")) return;
+    await api.delete(`/codigos/${id}`); loadAll(); notify("ELIMINADO ✓");
   }
 
   // --- CATEGORIAS ---
   async function saveCategoria() {
-    if (editId) await api.put(`/catalogo/categorias/${editId}`, form);
-    else await api.post("/catalogo/categorias", form);
-    resetForm(); loadAll(); notify("Guardado ✓");
+    const data = { ...form, nombre: toUpperCase(form.nombre), descripcion: toUpperCase(form.descripcion) };
+    if (editId) await api.put(`/catalogo/categorias/${editId}`, data);
+    else await api.post("/catalogo/categorias", data);
+    resetForm(); loadAll(); notify("GUARDADO ✓");
   }
 
   async function deleteCategoria(id: number) {
-    if (!confirm("¿Eliminar categoría?")) return;
-    await api.delete(`/catalogo/categorias/${id}`); loadAll(); notify("Eliminado ✓");
+    if (!confirm("¿ELIMINAR CATEGORÍA?")) return;
+    await api.delete(`/catalogo/categorias/${id}`); loadAll(); notify("ELIMINADO ✓");
   }
 
   // --- UNIDADES ---
   async function saveUnidad() {
-    if (editId) await api.put(`/catalogo/unidades/${editId}`, form);
-    else await api.post("/catalogo/unidades", form);
-    resetForm(); loadAll(); notify("Guardado ✓");
+    const data = { ...form, nombre: toUpperCase(form.nombre), abreviatura: toUpperCase(form.abreviatura) };
+    if (editId) await api.put(`/catalogo/unidades/${editId}`, data);
+    else await api.post("/catalogo/unidades", data);
+    resetForm(); loadAll(); notify("GUARDADO ✓");
   }
 
   async function deleteUnidad(id: number) {
-    if (!confirm("¿Eliminar unidad?")) return;
-    await api.delete(`/catalogo/unidades/${id}`); loadAll(); notify("Eliminado ✓");
+    if (!confirm("¿ELIMINAR UNIDAD?")) return;
+    await api.delete(`/catalogo/unidades/${id}`); loadAll(); notify("ELIMINADO ✓");
   }
 
   // --- ITEMS ---
   const codigoSeleccionado = codigos.find(c => c.id === Number(form.codigo_id));
 
   async function saveItem() {
-    const itemData = { ...form };
+    const itemData = { ...form, nombre: toUpperCase(form.nombre) };
     if (!itemData.codigo_id || itemData.codigo_id === 0) {
       delete itemData.codigo_id;
     }
     if (editId) await api.put(`/catalogo/items/${editId}`, { ...itemData, usuario_id: 1 });
     else await api.post("/catalogo/items", itemData);
-    resetForm(); loadAll(); notify("Guardado ✓");
+    resetForm(); loadAll(); notify("GUARDADO ✓");
   }
 
   async function deleteItem(id: number) {
-    if (!confirm("¿Eliminar item?")) return;
-    await api.delete(`/catalogo/items/${id}`); loadAll(); notify("Eliminado ✓");
+    if (!confirm("¿ELIMINAR ITEM?")) return;
+    await api.delete(`/catalogo/items/${id}`); loadAll(); notify("ELIMINADO ✓");
   }
 
   const tabStyle = (t: string) => ({
@@ -92,19 +97,19 @@ export default function Catalogo() {
     color: tab === t ? "#1a1a2e" : "#666",
     fontSize: "0.9rem",
   });
-  const inputStyle = { width: "100%", padding: "0.6rem", borderRadius: "6px", border: "1px solid #ddd", fontSize: "0.95rem" };
+  const inputStyle = { width: "100%", padding: "0.6rem", borderRadius: "6px", border: "1px solid #ddd", fontSize: "0.95rem", textTransform: "uppercase" as const };
   const btnStyle = (color: string) => ({ padding: "0.5rem 1rem", background: color, color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" });
   const checkStyle = { display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0" };
 
   return (
-    <NavLayout titulo="Catálogo">
+    <NavLayout titulo="CATÁLOGO">
       {msg && <div style={{ background: "#4CAF50", color: "#fff", padding: "0.75rem 1rem", borderRadius: "8px", marginBottom: "1rem" }}>{msg}</div>}
 
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0", flexWrap: "wrap" }}>
-        <button style={tabStyle("codigos")} onClick={() => { setTab("codigos"); resetForm(); }}>📋 Códigos</button>
-        <button style={tabStyle("categorias")} onClick={() => { setTab("categorias"); resetForm(); }}>🗂 Categorías</button>
-        <button style={tabStyle("unidades")} onClick={() => { setTab("unidades"); resetForm(); }}>📏 Unidades</button>
-        <button style={tabStyle("items")} onClick={() => { setTab("items"); resetForm(); }}>📦 Items</button>
+        <button style={tabStyle("codigos")} onClick={() => { setTab("codigos"); resetForm(); }}>📋 CÓDIGOS</button>
+        <button style={tabStyle("categorias")} onClick={() => { setTab("categorias"); resetForm(); }}>🗂 CATEGORÍAS</button>
+        <button style={tabStyle("unidades")} onClick={() => { setTab("unidades"); resetForm(); }}>📏 UNIDADES</button>
+        <button style={tabStyle("items")} onClick={() => { setTab("items"); resetForm(); }}>📦 ITEMS</button>
       </div>
 
       <div style={{ background: "#fff", borderRadius: "0 8px 8px 8px", padding: "1.5rem", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
@@ -112,47 +117,47 @@ export default function Catalogo() {
         {/* ===== CODIGOS ===== */}
         {tab === "codigos" && (
           <>
-            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "Editar" : "Nuevo"} Código</h3>
+            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "EDITAR" : "NUEVO"} CÓDIGO</h3>
             <div style={{ background: "#f9f9f9", borderRadius: "8px", padding: "1.25rem", marginBottom: "1.5rem", border: "1px solid #eee" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "#666" }}>Nombre del código</label>
-                  <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="ej: Valor Fiscal 2025" />
+                  <label style={{ fontSize: "0.8rem", color: "#666" }}>NOMBRE DEL CÓDIGO</label>
+                  <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="EJ: VALOR FISCAL 2025" />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "#666" }}>Descripción</label>
-                  <input style={inputStyle} value={form.descripcion || ""} onChange={e => setForm({ ...form, descripcion: e.target.value })} placeholder="Descripción del código" />
+                  <label style={{ fontSize: "0.8rem", color: "#666" }}>DESCRIPCIÓN</label>
+                  <input style={inputStyle} value={form.descripcion || ""} onChange={e => setForm({ ...form, descripcion: e.target.value })} placeholder="DESCRIPCIÓN DEL CÓDIGO" />
                 </div>
               </div>
-              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: "0.75rem" }}>Campos que tendrán los items de este código:</p>
+              <p style={{ fontSize: "0.8rem", color: "#888", marginBottom: "0.75rem" }}>CAMPOS QUE TENDRÁN LOS ITEMS DE ESTE CÓDIGO:</p>
               <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
                 <label style={checkStyle}>
                   <input type="checkbox" checked={!!form.tiene_numeracion} onChange={e => setForm({ ...form, tiene_numeracion: e.target.checked })} />
-                  <span style={{ fontSize: "0.9rem" }}>🔢 Numeración (inicio / fin)</span>
+                  <span style={{ fontSize: "0.9rem" }}>🔢 NUMERACIÓN (INICIO / FIN)</span>
                 </label>
                 <label style={checkStyle}>
                   <input type="checkbox" checked={form.tiene_precio !== false} onChange={e => setForm({ ...form, tiene_precio: e.target.checked })} defaultChecked />
-                  <span style={{ fontSize: "0.9rem" }}>💰 Precio unitario</span>
+                  <span style={{ fontSize: "0.9rem" }}>💰 PRECIO UNITARIO</span>
                 </label>
                 <label style={checkStyle}>
                   <input type="checkbox" checked={form.tiene_stock !== false} onChange={e => setForm({ ...form, tiene_stock: e.target.checked })} defaultChecked />
-                  <span style={{ fontSize: "0.9rem" }}>📦 Control de stock</span>
+                  <span style={{ fontSize: "0.9rem" }}>📦 CONTROL DE STOCK</span>
                 </label>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                <button style={btnStyle("#4CAF50")} onClick={saveCodigo}>Guardar</button>
-                {editId && <button style={btnStyle("#999")} onClick={resetForm}>Cancelar</button>}
+                <button style={btnStyle("#4CAF50")} onClick={saveCodigo}>GUARDAR</button>
+                {editId && <button style={btnStyle("#999")} onClick={resetForm}>CANCELAR</button>}
               </div>
             </div>
 
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Nombre</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Descripción</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Numeración</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Precio</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Stock</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Acciones</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>NOMBRE</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>DESCRIPCIÓN</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>NUMERACIÓN</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>PRECIO</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>STOCK</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>ACCIONES</th>
               </tr></thead>
               <tbody>{codigos.map(c => (
                 <tr key={c.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
@@ -162,8 +167,8 @@ export default function Catalogo() {
                   <td style={{ padding: "0.75rem", textAlign: "center" }}>{c.tiene_precio ? "✅" : "—"}</td>
                   <td style={{ padding: "0.75rem", textAlign: "center" }}>{c.tiene_stock ? "✅" : "—"}</td>
                   <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                    <button style={btnStyle("#2196F3")} onClick={() => { setForm({ ...c, tiene_numeracion: !!c.tiene_numeracion, tiene_precio: !!c.tiene_precio, tiene_stock: !!c.tiene_stock }); setEditId(c.id); }}>Editar</button>
-                    <button style={btnStyle("#f44336")} onClick={() => deleteCodigo(c.id)}>Eliminar</button>
+                    <button style={btnStyle("#2196F3")} onClick={() => { setForm({ ...c, tiene_numeracion: !!c.tiene_numeracion, tiene_precio: !!c.tiene_precio, tiene_stock: !!c.tiene_stock }); setEditId(c.id); }}>EDITAR</button>
+                    <button style={btnStyle("#f44336")} onClick={() => deleteCodigo(c.id)}>ELIMINAR</button>
                   </td>
                 </tr>
               ))}</tbody>
@@ -174,34 +179,34 @@ export default function Catalogo() {
         {/* ===== CATEGORIAS ===== */}
         {tab === "categorias" && (
           <>
-            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "Editar" : "Nueva"} Categoría</h3>
+            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "EDITAR" : "NUEVA"} CATEGORÍA</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "0.75rem", marginBottom: "1.5rem", alignItems: "end" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>Nombre</label>
-                <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre de categoría" />
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>NOMBRE</label>
+                <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="NOMBRE DE CATEGORÍA" />
               </div>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>Descripción</label>
-                <input style={inputStyle} value={form.descripcion || ""} onChange={e => setForm({ ...form, descripcion: e.target.value })} placeholder="Descripción" />
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>DESCRIPCIÓN</label>
+                <input style={inputStyle} value={form.descripcion || ""} onChange={e => setForm({ ...form, descripcion: e.target.value })} placeholder="DESCRIPCIÓN" />
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button style={btnStyle("#4CAF50")} onClick={saveCategoria}>Guardar</button>
-                {editId && <button style={btnStyle("#999")} onClick={resetForm}>Cancelar</button>}
+                <button style={btnStyle("#4CAF50")} onClick={saveCategoria}>GUARDAR</button>
+                {editId && <button style={btnStyle("#999")} onClick={resetForm}>CANCELAR</button>}
               </div>
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Nombre</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Descripción</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Acciones</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>NOMBRE</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>DESCRIPCIÓN</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>ACCIONES</th>
               </tr></thead>
               <tbody>{categorias.map(c => (
                 <tr key={c.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "0.75rem" }}>{c.nombre}</td>
                   <td style={{ padding: "0.75rem", color: "#666" }}>{c.descripcion}</td>
                   <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                    <button style={btnStyle("#2196F3")} onClick={() => { setForm(c); setEditId(c.id); }}>Editar</button>
-                    <button style={btnStyle("#f44336")} onClick={() => deleteCategoria(c.id)}>Eliminar</button>
+                    <button style={btnStyle("#2196F3")} onClick={() => { setForm(c); setEditId(c.id); }}>EDITAR</button>
+                    <button style={btnStyle("#f44336")} onClick={() => deleteCategoria(c.id)}>ELIMINAR</button>
                   </td>
                 </tr>
               ))}</tbody>
@@ -212,34 +217,34 @@ export default function Catalogo() {
         {/* ===== UNIDADES ===== */}
         {tab === "unidades" && (
           <>
-            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "Editar" : "Nueva"} Unidad de Medida</h3>
+            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "EDITAR" : "NUEVA"} UNIDAD DE MEDIDA</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "0.75rem", marginBottom: "1.5rem", alignItems: "end" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>Nombre</label>
-                <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="ej: Arroba" />
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>NOMBRE</label>
+                <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="EJ: ARROBA" />
               </div>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>Abreviatura</label>
-                <input style={inputStyle} value={form.abreviatura || ""} onChange={e => setForm({ ...form, abreviatura: e.target.value })} placeholder="ej: arr" />
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>ABREVIATURA</label>
+                <input style={inputStyle} value={form.abreviatura || ""} onChange={e => setForm({ ...form, abreviatura: e.target.value })} placeholder="EJ: ARR" />
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button style={btnStyle("#4CAF50")} onClick={saveUnidad}>Guardar</button>
-                {editId && <button style={btnStyle("#999")} onClick={resetForm}>Cancelar</button>}
+                <button style={btnStyle("#4CAF50")} onClick={saveUnidad}>GUARDAR</button>
+                {editId && <button style={btnStyle("#999")} onClick={resetForm}>CANCELAR</button>}
               </div>
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Nombre</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Abreviatura</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Acciones</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>NOMBRE</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>ABREVIATURA</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>ACCIONES</th>
               </tr></thead>
               <tbody>{unidades.map(u => (
                 <tr key={u.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "0.75rem" }}>{u.nombre}</td>
                   <td style={{ padding: "0.75rem", color: "#666" }}>{u.abreviatura}</td>
                   <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                    <button style={btnStyle("#2196F3")} onClick={() => { setForm(u); setEditId(u.id); }}>Editar</button>
-                    <button style={btnStyle("#f44336")} onClick={() => deleteUnidad(u.id)}>Eliminar</button>
+                    <button style={btnStyle("#2196F3")} onClick={() => { setForm(u); setEditId(u.id); }}>EDITAR</button>
+                    <button style={btnStyle("#f44336")} onClick={() => deleteUnidad(u.id)}>ELIMINAR</button>
                   </td>
                 </tr>
               ))}</tbody>
@@ -250,14 +255,14 @@ export default function Catalogo() {
         {/* ===== ITEMS ===== */}
         {tab === "items" && (
           <>
-            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "Editar" : "Nuevo"} Item</h3>
+            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "EDITAR" : "NUEVO"} ITEM</h3>
             <div style={{ background: "#f9f9f9", borderRadius: "8px", padding: "1.25rem", marginBottom: "1.5rem", border: "1px solid #eee" }}>
 
               {/* Selección de código */}
               <div style={{ marginBottom: "1rem" }}>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>Código</label>
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>CÓDIGO</label>
                 <select style={inputStyle} value={form.codigo_id || ""} onChange={e => setForm({ ...form, codigo_id: Number(e.target.value) })}>
-                  <option value="">Seleccionar código...</option>
+                  <option value="">SELECCIONAR CÓDIGO...</option>
                   {codigos.map(c => <option key={c.id} value={c.id}>{c.nombre} {c.tiene_numeracion ? "🔢" : ""} {c.tiene_stock ? "📦" : ""}</option>)}
                 </select>
               </div>
@@ -265,26 +270,26 @@ export default function Catalogo() {
               {codigoSeleccionado && (
                 <div style={{ background: "#e3f2fd", borderRadius: "6px", padding: "0.75rem", marginBottom: "1rem", fontSize: "0.85rem", color: "#1565c0" }}>
                   <b>{codigoSeleccionado.nombre}</b> — {codigoSeleccionado.descripcion}<br />
-                  Campos: {codigoSeleccionado.tiene_numeracion ? "🔢 Numeración " : ""}{codigoSeleccionado.tiene_precio ? "💰 Precio " : ""}{codigoSeleccionado.tiene_stock ? "📦 Stock" : ""}
+                  CAMPOS: {codigoSeleccionado.tiene_numeracion ? "🔢 NUMERACIÓN " : ""}{codigoSeleccionado.tiene_precio ? "💰 PRECIO " : ""}{codigoSeleccionado.tiene_stock ? "📦 STOCK" : ""}
                 </div>
               )}
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "#666" }}>Nombre del item</label>
-                  <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
+                  <label style={{ fontSize: "0.8rem", color: "#666" }}>NOMBRE DEL ITEM</label>
+                  <input style={inputStyle} value={form.nombre || ""} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="NOMBRE" />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "#666" }}>Categoría</label>
+                  <label style={{ fontSize: "0.8rem", color: "#666" }}>CATEGORÍA</label>
                   <select style={inputStyle} value={form.categoria_id || ""} onChange={e => setForm({ ...form, categoria_id: Number(e.target.value) })}>
-                    <option value="">Seleccionar...</option>
+                    <option value="">SELECCIONAR...</option>
                     {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "#666" }}>Unidad</label>
+                  <label style={{ fontSize: "0.8rem", color: "#666" }}>UNIDAD</label>
                   <select style={inputStyle} value={form.unidad_id || ""} onChange={e => setForm({ ...form, unidad_id: Number(e.target.value) })}>
-                    <option value="">Seleccionar...</option>
+                    <option value="">SELECCIONAR...</option>
                     {unidades.map(u => <option key={u.id} value={u.id}>{u.nombre} ({u.abreviatura})</option>)}
                   </select>
                 </div>
@@ -292,7 +297,7 @@ export default function Catalogo() {
                 {/* Campos según código seleccionado */}
                 {(!codigoSeleccionado || codigoSeleccionado.tiene_precio) && (
                   <div>
-                    <label style={{ fontSize: "0.8rem", color: "#666" }}>💰 Precio unitario (Bs.)</label>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>💰 PRECIO UNITARIO (BS.)</label>
                     <input style={inputStyle} type="number" step="0.01" value={form.precio || ""} onChange={e => setForm({ ...form, precio: Number(e.target.value) })} placeholder="0.00" />
                   </div>
                 )}
@@ -300,53 +305,53 @@ export default function Catalogo() {
                 {codigoSeleccionado?.tiene_numeracion ? (
                   <>
                     <div>
-                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 Numeración inicio</label>
-                      <input style={inputStyle} type="number" value={form.numeracion_inicio || ""} onChange={e => setForm({ ...form, numeracion_inicio: Number(e.target.value) })} placeholder="ej: 1" />
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN INICIO</label>
+                      <input style={inputStyle} type="number" value={form.numeracion_inicio || ""} onChange={e => setForm({ ...form, numeracion_inicio: Number(e.target.value) })} placeholder="EJ: 1" />
                     </div>
                     <div>
-                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 Numeración fin</label>
-                      <input style={inputStyle} type="number" value={form.numeracion_fin || ""} onChange={e => setForm({ ...form, numeracion_fin: Number(e.target.value) })} placeholder="ej: 100" />
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN FIN</label>
+                      <input style={inputStyle} type="number" value={form.numeracion_fin || ""} onChange={e => setForm({ ...form, numeracion_fin: Number(e.target.value) })} placeholder="EJ: 100" />
                     </div>
                     {form.numeracion_inicio && form.numeracion_fin && (
                       <div style={{ gridColumn: "span 3" }}>
                         <div style={{ background: "#e8f5e9", borderRadius: "6px", padding: "0.6rem 1rem", fontSize: "0.9rem", color: "#2e7d32" }}>
-                          📦 Cantidad calculada: <b>{form.numeracion_fin - form.numeracion_inicio + 1}</b> unidades
+                          📦 CANTIDAD CALCULADA: <b>{form.numeracion_fin - form.numeracion_inicio + 1}</b> UNIDADES
                         </div>
                       </div>
                     )}
                   </>
                 ) : codigoSeleccionado?.tiene_stock ? (
                   <div>
-                    <label style={{ fontSize: "0.8rem", color: "#666" }}>📦 Stock inicial</label>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>📦 STOCK INICIAL</label>
                     <input style={inputStyle} type="number" value={form.stock_actual || 0} onChange={e => setForm({ ...form, stock_actual: Number(e.target.value) })} />
                   </div>
                 ) : null}
               </div>
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                <button style={btnStyle("#4CAF50")} onClick={saveItem}>Guardar item</button>
-                {editId && <button style={btnStyle("#999")} onClick={resetForm}>Cancelar</button>}
+                <button style={btnStyle("#4CAF50")} onClick={saveItem}>GUARDAR ITEM</button>
+                {editId && <button style={btnStyle("#999")} onClick={resetForm}>CANCELAR</button>}
               </div>
             </div>
 
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Nombre</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Código</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Categoría</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Precio</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Numeración</th>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Stock</th>
-                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Acciones</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>NOMBRE</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>CÓDIGO</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>CATEGORÍA</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>PRECIO</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>NUMERACIÓN</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>STOCK</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>ACCIONES</th>
               </tr></thead>
               <tbody>{items.map(i => (
                 <tr key={i.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "0.75rem", fontWeight: "bold" }}>{i.nombre}</td>
                   <td style={{ padding: "0.75rem", fontSize: "0.85rem", color: "#1565c0" }}>{i.codigo_nombre || "—"}</td>
                   <td style={{ padding: "0.75rem", color: "#666" }}>{i.categoria}</td>
-                  <td style={{ padding: "0.75rem" }}>Bs. {Number(i.precio).toFixed(2)}</td>
+                  <td style={{ padding: "0.75rem" }}>BS. {Number(i.precio).toFixed(2)}</td>
                   <td style={{ padding: "0.75rem", fontSize: "0.85rem" }}>
-                    {i.numeracion_inicio ? `${i.numeracion_inicio} - ${i.numeracion_fin} (actual: ${i.numeracion_actual})` : "—"}
+                    {i.numeracion_inicio ? `${i.numeracion_inicio} - ${i.numeracion_fin} (ACTUAL: ${i.numeracion_actual})` : "—"}
                   </td>
                   <td style={{ padding: "0.75rem" }}>
                     <span style={{ background: i.tiene_stock ? (i.stock_actual <= 5 ? "#ffebee" : "#e8f5e9") : "#f5f5f5", color: i.tiene_stock ? (i.stock_actual <= 5 ? "#c62828" : "#2e7d32") : "#999", padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: "bold", fontSize: "0.85rem" }}>
@@ -354,8 +359,8 @@ export default function Catalogo() {
                     </span>
                   </td>
                   <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                    <button style={btnStyle("#2196F3")} onClick={() => { setForm({ ...i, tiene_stock: i.tiene_stock === 1 }); setEditId(i.id); }}>Editar</button>
-                    <button style={btnStyle("#f44336")} onClick={() => deleteItem(i.id)}>Eliminar</button>
+                    <button style={btnStyle("#2196F3")} onClick={() => { setForm({ ...i, tiene_stock: i.tiene_stock === 1 }); setEditId(i.id); }}>EDITAR</button>
+                    <button style={btnStyle("#f44336")} onClick={() => deleteItem(i.id)}>ELIMINAR</button>
                   </td>
                 </tr>
               ))}</tbody>

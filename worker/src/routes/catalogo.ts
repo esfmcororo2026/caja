@@ -5,6 +5,8 @@ import { authMiddleware } from "../middleware/auth";
 const route = new Hono<{ Bindings: Env }>();
 route.use("*", authMiddleware);
 
+const toUpperCase = (str: any) => str ? String(str).toUpperCase() : "";
+
 route.get("/categorias", async (c) => {
   const r = await query(c.env, "SELECT * FROM categorias WHERE activo = 1");
   return c.json(r.rows);
@@ -13,7 +15,7 @@ route.get("/categorias", async (c) => {
 route.post("/categorias", async (c) => {
   try {
     const { nombre, descripcion } = await c.req.json();
-    const r = await query(c.env, "INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)", [nombre, descripcion]);
+    const r = await query(c.env, "INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)", [toUpperCase(nombre), toUpperCase(descripcion)]);
     return c.json({ id: r.lastInsertRowid });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -22,7 +24,7 @@ route.post("/categorias", async (c) => {
 
 route.put("/categorias/:id", async (c) => {
   const { nombre, descripcion } = await c.req.json();
-  await query(c.env, "UPDATE categorias SET nombre = ?, descripcion = ? WHERE id = ?", [nombre, descripcion, c.req.param("id")]);
+  await query(c.env, "UPDATE categorias SET nombre = ?, descripcion = ? WHERE id = ?", [toUpperCase(nombre), toUpperCase(descripcion), c.req.param("id")]);
   return c.json({ ok: true });
 });
 
@@ -56,7 +58,7 @@ route.post("/items", async (c) => {
     const finalPrecio = precio || 0;
     
     const sql = "INSERT INTO items (nombre, codigo_id, categoria_id, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin, numeracion_actual) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    const params = [nombre, finalCodigoId, categoria_id, finalPrecio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, numActual];
+    const params = [toUpperCase(nombre), finalCodigoId, categoria_id, finalPrecio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, numActual];
     
     const r = await query(c.env, sql, params);
     return c.json({ id: r.lastInsertRowid });
@@ -77,7 +79,7 @@ route.put("/items/:id", async (c) => {
     if (numeracion_inicio && numeracion_fin) stockCalc = numeracion_fin - numeracion_inicio + 1;
     await query(c.env,
       "UPDATE items SET nombre = ?, precio = ?, unidad_id = ?, tiene_stock = ?, stock_actual = ?, numeracion_inicio = ?, numeracion_fin = ? WHERE id = ?",
-      [nombre, precio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, c.req.param("id")]
+      [toUpperCase(nombre), precio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, c.req.param("id")]
     );
     return c.json({ ok: true });
   } catch (e: any) {
@@ -106,7 +108,7 @@ route.get("/unidades", async (c) => {
 route.post("/unidades", async (c) => {
   try {
     const { nombre, abreviatura } = await c.req.json();
-    const r = await query(c.env, "INSERT INTO unidades (nombre, abreviatura) VALUES (?, ?)", [nombre, abreviatura]);
+    const r = await query(c.env, "INSERT INTO unidades (nombre, abreviatura) VALUES (?, ?)", [toUpperCase(nombre), toUpperCase(abreviatura)]);
     return c.json({ id: r.lastInsertRowid });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -116,7 +118,7 @@ route.post("/unidades", async (c) => {
 route.put("/unidades/:id", async (c) => {
   try {
     const { nombre, abreviatura } = await c.req.json();
-    await query(c.env, "UPDATE unidades SET nombre = ?, abreviatura = ? WHERE id = ?", [nombre, abreviatura, c.req.param("id")]);
+    await query(c.env, "UPDATE unidades SET nombre = ?, abreviatura = ? WHERE id = ?", [toUpperCase(nombre), toUpperCase(abreviatura), c.req.param("id")]);
     return c.json({ ok: true });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
