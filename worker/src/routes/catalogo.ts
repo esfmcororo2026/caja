@@ -95,8 +95,12 @@ route.delete("/items/:id", async (c) => {
 });
 
 route.get("/unidades", async (c) => {
-  const r = await query(c.env, "SELECT * FROM unidades WHERE activo = 1");
-  return c.json(r.rows);
+  try {
+    const r = await query(c.env, "SELECT * FROM unidades");
+    return c.json(r.rows);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
 });
 
 route.post("/unidades", async (c) => {
@@ -121,7 +125,7 @@ route.put("/unidades/:id", async (c) => {
 
 route.delete("/unidades/:id", async (c) => {
   try {
-    await query(c.env, "UPDATE unidades SET activo = 0 WHERE id = ?", [c.req.param("id")]);
+    await query(c.env, "DELETE FROM unidades WHERE id = ?", [c.req.param("id")]);
     return c.json({ ok: true });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
