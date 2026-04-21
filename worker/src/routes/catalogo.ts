@@ -119,4 +119,13 @@ route.put("/unidades/:id", async (c) => {
   }
 });
 
+route.delete("/unidades/:id", async (c) => {
+  try {
+    await query(c.env, "DELETE FROM unidades WHERE id = ?", [c.req.param("id")]);
+    return c.json({ ok: true });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
 export default route;
