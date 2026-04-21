@@ -125,9 +125,13 @@ route.put("/unidades/:id", async (c) => {
 
 route.delete("/unidades/:id", async (c) => {
   try {
-    await query(c.env, "DELETE FROM unidades WHERE id = ?", [c.req.param("id")]);
+    const id = c.req.param("id");
+    await query(c.env, "PRAGMA foreign_keys = OFF");
+    await query(c.env, "DELETE FROM unidades WHERE id = ?", [id]);
+    await query(c.env, "PRAGMA foreign_keys = ON");
     return c.json({ ok: true });
   } catch (e: any) {
+    console.error("Error deleting unidad:", e.message);
     return c.json({ error: e.message }, 500);
   }
 });
