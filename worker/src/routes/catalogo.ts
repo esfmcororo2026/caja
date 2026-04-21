@@ -109,4 +109,14 @@ route.post("/unidades", async (c) => {
   }
 });
 
+route.put("/unidades/:id", async (c) => {
+  try {
+    const { nombre, abreviatura } = await c.req.json();
+    await query(c.env, "UPDATE unidades SET nombre = ?, abreviatura = ? WHERE id = ?", [nombre, abreviatura, c.req.param("id")]);
+    return c.json({ ok: true });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
 export default route;

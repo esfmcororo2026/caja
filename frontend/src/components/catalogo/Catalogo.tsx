@@ -57,8 +57,14 @@ export default function Catalogo() {
 
   // --- UNIDADES ---
   async function saveUnidad() {
-    await api.post("/catalogo/unidades", form);
+    if (editId) await api.put(`/catalogo/unidades/${editId}`, form);
+    else await api.post("/catalogo/unidades", form);
     resetForm(); loadAll(); notify("Guardado ✓");
+  }
+
+  async function deleteUnidad(id: number) {
+    if (!confirm("¿Eliminar unidad?")) return;
+    await api.delete(`/catalogo/unidades/${id}`); loadAll(); notify("Eliminado ✓");
   }
 
   // --- ITEMS ---
@@ -206,7 +212,7 @@ export default function Catalogo() {
         {/* ===== UNIDADES ===== */}
         {tab === "unidades" && (
           <>
-            <h3 style={{ marginBottom: "1rem", color: "#333" }}>Nueva Unidad de Medida</h3>
+            <h3 style={{ marginBottom: "1rem", color: "#333" }}>{editId ? "Editar" : "Nueva"} Unidad de Medida</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "0.75rem", marginBottom: "1.5rem", alignItems: "end" }}>
               <div>
                 <label style={{ fontSize: "0.8rem", color: "#666" }}>Nombre</label>
@@ -216,17 +222,25 @@ export default function Catalogo() {
                 <label style={{ fontSize: "0.8rem", color: "#666" }}>Abreviatura</label>
                 <input style={inputStyle} value={form.abreviatura || ""} onChange={e => setForm({ ...form, abreviatura: e.target.value })} placeholder="ej: arr" />
               </div>
-              <button style={btnStyle("#4CAF50")} onClick={saveUnidad}>Guardar</button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button style={btnStyle("#4CAF50")} onClick={saveUnidad}>Guardar</button>
+                {editId && <button style={btnStyle("#999")} onClick={resetForm}>Cancelar</button>}
+              </div>
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
                 <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Nombre</th>
                 <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>Abreviatura</th>
+                <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>Acciones</th>
               </tr></thead>
               <tbody>{unidades.map(u => (
                 <tr key={u.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "0.75rem" }}>{u.nombre}</td>
                   <td style={{ padding: "0.75rem", color: "#666" }}>{u.abreviatura}</td>
+                  <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+                    <button style={btnStyle("#2196F3")} onClick={() => { setForm(u); setEditId(u.id); }}>Editar</button>
+                    <button style={btnStyle("#f44336")} onClick={() => deleteUnidad(u.id)}>Eliminar</button>
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
