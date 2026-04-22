@@ -113,8 +113,12 @@ export default function Ventas() {
     w.document.close(); w.print();
   }
 
-  const inputStyle = { width: "100%", padding: "0.6rem", borderRadius: "6px", border: "1px solid #ddd", fontSize: "0.95rem" };
-  const btnStyle = (color: string) => ({ padding: "0.5rem 1rem", background: color, color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" });
+  // Colores para categorías
+  const colorMap: { [key: number]: string } = {};
+  categorias.forEach((cat, idx) => {
+    const colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E2"];
+    colorMap[cat.id] = colors[idx % colors.length];
+  });
 
   return (
     <NavLayout titulo="Punto de Venta">
@@ -147,16 +151,36 @@ export default function Ventas() {
               ))}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.75rem" }}>
-              {items.filter(i => i.categoria_id === catActiva).map(i => (
-                <div key={i.id} onClick={() => agregarItem(i)}
-                  style={{ border: "1px solid #e0e0e0", borderRadius: "8px", padding: "1rem", cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#e3f2fd"; e.currentTarget.style.borderColor = "#2196F3"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e0e0e0"; }}>
-                  <div style={{ fontWeight: "bold", marginBottom: "0.3rem", fontSize: "0.9rem" }}>{i.nombre}</div>
-                  <div style={{ color: "#2196F3", fontWeight: "bold" }}>Bs. {Number(i.precio).toFixed(2)}</div>
-                  <div style={{ color: "#888", fontSize: "0.75rem" }}>{i.unidad_nombre} {i.tiene_stock ? `| Stock: ${i.stock_actual}` : "| Ilimitado"}</div>
-                </div>
-              ))}
+              {items.filter(i => i.categoria_id === catActiva).map(i => {
+                const bgColor = colorMap[i.categoria_id];
+                return (
+                  <div key={i.id} onClick={() => agregarItem(i)}
+                    style={{
+                      background: bgColor,
+                      borderRadius: "12px",
+                      padding: "1rem",
+                      cursor: "pointer",
+                      textAlign: "center",
+                      transition: "all 0.2s",
+                      color: "#fff",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                      transform: "scale(1)"
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = "scale(1.05)";
+                      e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.2)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+                    }}>
+                    <div style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>📦</div>
+                    <div style={{ fontWeight: "bold", marginBottom: "0.3rem", fontSize: "0.95rem", lineHeight: "1.2" }}>{i.nombre}</div>
+                    <div style={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "0.3rem" }}>Bs. {Number(i.precio).toFixed(2)}</div>
+                    <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{i.unidad_nombre} {i.tiene_stock ? `| Stock: ${i.stock_actual}` : "| ∞"}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
