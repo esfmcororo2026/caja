@@ -10,15 +10,18 @@ interface Cliente {
 
 interface BuscadorPersonasProps {
   onSelect: (cliente: Cliente) => void;
-  onRegistroNuevo?: (nombre: string) => void;
 }
 
-export default function BuscadorPersonas({ onSelect, onRegistroNuevo }: BuscadorPersonasProps) {
+export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
   const [busqueda, setBusqueda] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cargando, setCargando] = useState(false);
   const [mostrarLista, setMostrarLista] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoTipo, setNuevoTipo] = useState("ESTUDIANTE");
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (busqueda.trim().length < 2) {
@@ -55,15 +58,39 @@ export default function BuscadorPersonas({ onSelect, onRegistroNuevo }: Buscador
     onSelect(cliente);
   }
 
-  function registrarNueva() {
+  function abrirModalRegistro() {
     if (busqueda.trim().length < 3) {
       alert("Ingresa un nombre válido (mínimo 3 caracteres)");
       return;
     }
-    if (onRegistroNuevo) {
-      onRegistroNuevo(busqueda);
-      setBusqueda("");
-      setClienteSeleccionado(null);
+    setNuevoNombre(busqueda.toUpperCase());
+    setNuevoTipo("ESTUDIANTE");
+    setMostrarModal(true);
+  }
+
+  async function guardarNuevoCliente() {
+    if (!nuevoNombre.trim()) {
+      alert("El nombre es obligatorio");
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      const nuevoCliente = await api.post("/clientes", {
+        nombre: nuevoNombre.toUpperCase(),
+        tipo: nuevoTipo,
+      });
+
+      setClienteSeleccionado(nuevoCliente);
+      setBusqueda(nuevoCliente.nombre);
+      setMostrarModal(false);
+      setMostrarLista(false);
+      onSelect(nuevoCliente);
+    } catch (error) {
+      console.error("Error al registrar cliente:", error);
+      alert("Error al registrar el cliente");
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -148,32 +175,13 @@ export default function BuscadorPersonas({ onSelect, onRegistroNuevo }: Buscador
                   </div>
                 </div>
               ))}
-              {busqueda.trim().length >= 3 && (
-                <div
-                  style={{
-                    padding: "0.75rem 1rem",
-                    borderTop: "1px solid #e0e0e0",
-                    background: "#f9f9f9",
-                  }}
-                >
-                  <button
-                    onClick={registrarNueva}
-                    style={{
-                      ...btnStyle("#FF9800"),
-                      width: "100%",
-                    }}
-                  >
-                    ➕ Registrar como nuevo cliente
-                  </button>
-                </div>
-              )}
             </>
           ) : (
             <div style={{ padding: "1rem", textAlign: "center", color: "#aaa" }}>
               <p style={{ margin: "0.5rem 0" }}>No se encontraron resultados</p>
               {busqueda.trim().length >= 3 && (
                 <button
-                  onClick={registrarNueva}
+                  onClick={abrirModalRegistro}
                   style={{
                     ...btnStyle("#FF9800"),
                     width: "100%",
@@ -200,6 +208,95 @@ export default function BuscadorPersonas({ onSelect, onRegistroNuevo }: Buscador
           }}
         >
           ✅ {clienteSeleccionado.nombre} ({clienteSeleccionado.tipo})
+        </div>
+      )}
+
+      {mostrarModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+          }}
+          onClick={() => !guardando && setMostrarModal(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: "8px",
+              padding: "2rem",
+              maxWidth: "400px",
+              width: "90%",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 1.5rem 0", fontSize: "1.3rem", color: "#333" }}>
+              Registrar nuevo cliente
+            </h2>
+
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ fontSize: "0.85rem", color: "#666", display: "block", marginBottom: "0.4rem" }}>
+                Nombre *
+              </label>
+              <input
+                style={inputStyle}
+                value={nuevoNombre}
+                onChange={(e) => setNuevoNombre(e.target.value.toUpperCase())}
+                placeholder="Nombre del cliente"
+                disabled={guardando}
+              />
+            </div>
+
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ fontSize: "0.85rem", color: "#666", display: "block", marginBottom: "0.4rem" }}>
+                Tipo de cliente
+              </label>
+              <select
+                style={{
+                  ...inputStyle,
+                  cursor: "pointer",
+                }}
+                value={nuevoTipo}
+                onChange={(e) => setNuevoTipo(e.target.value)}
+                disabled={guardando}
+              >
+                <option value="ESTUDIANTE">Estudiante</option>
+                <option value="PERSONAL">Personal</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setMostrarModal(false)}
+                style={{
+                  ...btnStyle("#999"),
+                  opacity: guardando ? 0.6 : 1,
+                }}
+                disabled={guardando}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={guardarNuevoCliente}
+                style={{
+                  ...btnStyle("#4CAF50"),
+                  opacity: guardando ? 0.6 : 1,
+                }}
+                disabled={guardando}
+              >
+                {guardando ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
