@@ -14,28 +14,32 @@ router.post('/importar/backup', async (c) => {
 
     let insertados = 0;
     let duplicados = 0;
+    const batchSize = 10;
 
-    for (const cliente of clientes) {
-      try {
-        const { nombre, ci, tipo } = cliente;
+    for (let i = 0; i < clientes.length; i += batchSize) {
+      const batch = clientes.slice(i, i + batchSize);
+      
+      for (const cliente of batch) {
+        try {
+          const { nombre, ci, tipo } = cliente;
 
-        if (!nombre) continue;
+          if (!nombre) continue;
 
-        // Verificar si ya existe por CI (si tiene CI)
-        let existe = [];
-        if (ci) {
-          const result = await query(c.env, `SELECT id FROM clientes WHERE ci = ? AND activo = 1`, [ci]);
-          existe = result.rows;
+          let existe = [];
+          if (ci) {
+            const result = await query(c.env, `SELECT id FROM clientes WHERE ci = ? AND activo = 1`, [ci]);
+            existe = result.rows;
+          }
+
+          if (existe.length === 0) {
+            await query(c.env, `INSERT INTO clientes (nombre, ci, tipo) VALUES (?, ?, ?)`, [nombre.toUpperCase(), ci || null, tipo || 'otro']);
+            insertados++;
+          } else {
+            duplicados++;
+          }
+        } catch (error) {
+          console.error('Error al insertar cliente:', error);
         }
-
-        if (existe.length === 0) {
-          await query(c.env, `INSERT INTO clientes (nombre, ci, tipo) VALUES (?, ?, ?)`, [nombre.toUpperCase(), ci || null, tipo || 'otro']);
-          insertados++;
-        } else {
-          duplicados++;
-        }
-      } catch (error) {
-        console.error('Error al insertar cliente:', error);
       }
     }
 
@@ -137,8 +141,7 @@ router.put('/:id', async (c) => {
 
 // DELETE - Eliminar cliente (soft delete)
 router.delete('/:id', async (c) => {
-  try {
-    const id = c.req.param('id');
+  try {\n    const id = c.req.param('id');
     await query(c.env, `UPDATE clientes SET activo = 0 WHERE id = ?`, [id]);
     return c.json({ success: true });
   } catch (error: any) {
