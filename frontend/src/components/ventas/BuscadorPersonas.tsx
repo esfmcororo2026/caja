@@ -26,6 +26,8 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
   const [errorModal, setErrorModal] = useState("");
 
   useEffect(() => {
+    if (clienteSeleccionado) return;
+
     if (busqueda.trim().length < 2) {
       setClientes([]);
       setMostrarLista(false);
@@ -37,17 +39,18 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [busqueda]);
+  }, [busqueda, clienteSeleccionado]);
 
   async function buscarClientes() {
     try {
       setCargando(true);
       const resultado = await api.get(`/clientes/buscar?q=${encodeURIComponent(busqueda)}`);
-      setClientes(resultado || []);
+      setClientes(Array.isArray(resultado) ? resultado : []);
       setMostrarLista(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al buscar clientes:", error);
       setClientes([]);
+      setMostrarLista(true);
     } finally {
       setCargando(false);
     }
@@ -55,9 +58,17 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
 
   function seleccionarCliente(cliente: Cliente) {
     setClienteSeleccionado(cliente);
-    setBusqueda(cliente.nombre);
+    setBusqueda("");
     setMostrarLista(false);
+    setClientes([]);
     onSelect(cliente);
+  }
+
+  function limpiarSeleccion() {
+    setClienteSeleccionado(null);
+    setBusqueda("");
+    setClientes([]);
+    setMostrarLista(false);
   }
 
   function abrirModalRegistro() {
@@ -87,18 +98,15 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
         tipo: nuevoTipo,
       });
 
-      setClienteSeleccionado(nuevoCliente);
-      setBusqueda(nuevoCliente.nombre);
+      seleccionarCliente(nuevoCliente);
       setMostrarModal(false);
-      setMostrarLista(false);
-      onSelect(nuevoCliente);
     } catch (error: any) {
       console.error("Error al registrar cliente:", error);
       
-      if (error.response?.status === 409) {
-        setErrorModal(error.response?.data?.error || "Este cliente ya existe");
+      if (error.status === 409) {
+        setErrorModal(error.message || "Este cliente ya existe");
       } else {
-        setErrorModal("Error al registrar el cliente");
+        setErrorModal(error.message || "Error al registrar el cliente");
       }
     } finally {
       setGuardando(false);
@@ -129,97 +137,134 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
       <label style={{ fontSize: "0.8rem", color: "#666", display: "block", marginBottom: "0.4rem" }}>
         Cliente / Persona
       </label>
-      <input
-        style={inputStyle}
-        value={busqueda}
-        onChange={(e) => {
-          setBusqueda(e.target.value);
-          setClienteSeleccionado(null);
-        }}
-        placeholder="Buscar por nombre..."
-        onFocus={() => busqueda.trim().length >= 2 && setMostrarLista(true)}
-      />
 
-      {cargando && (
-        <div style={{ marginTop: "0.5rem", color: "#2196F3", fontSize: "0.85rem" }}>
-          ⏳ Buscando...
-        </div>
-      )}
-
-      {mostrarLista && !cargando && (
+      {clienteSeleccionado ? (
         <div
           style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            background: "#fff",
-            border: "1px solid #ddd",
-            borderRadius: "6px",
-            marginTop: "0.25rem",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            zIndex: 1000,
-            maxHeight: "300px",
-            overflowY: "auto",
+            display: "flex",
+            gap: "0.5rem",
+            alignItems: "center",
           }}
         >
-          {clientes.length > 0 ? (
-            <>
-              {clientes.map((cliente) => (
-                <div
-                  key={cliente.id}
-                  onClick={() => seleccionarCliente(cliente)}
-                  style={{
-                    padding: "0.75rem 1rem",
-                    borderBottom: "1px solid #f0f0f0",
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
-                >
-                  <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
-                    {cliente.nombre}
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#888" }}>
-                    {cliente.ci ? `CI: ${cliente.ci}` : "Sin CI"} • {cliente.tipo}
-                  </div>
+          <div
+            style={{
+              flex: 1,
+              padding: "0.75rem",
+              background: "#e8f5e9",
+              border: "2px solid #4CAF50",
+              borderRadius: "6px",
+              fontSize: "0.95rem",
+            }}
+          >
+            <div style={{ fontWeight: "bold", color: "#2e7d32", marginBottom: "0.2rem" }}>
+              {clienteSeleccionado.nombre}
+            </div>
+            <div style={{ fontSize: "0.8rem", color: "#558b2f" }}>
+              {clienteSeleccionado.ci ? `CI: ${clienteSeleccionado.ci}` : "Sin CI"} • {clienteSeleccionado.tipo}
+            </div>
+          </div>
+          <button
+            onClick={limpiarSeleccion}
+            style={{
+              padding: "0.6rem 0.8rem",
+              background: "#f44336",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "1rem",
+              fontWeight: "bold",
+              minWidth: "44px",
+              height: "44px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Cambiar cliente"
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            style={{
+              ...inputStyle,
+              borderColor: mostrarLista ? "#2196F3" : "#ddd",
+            }}
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre..."
+            onFocus={() => busqueda.trim().length >= 2 && setMostrarLista(true)}
+          />
+
+          {cargando && (
+            <div style={{ marginTop: "0.5rem", color: "#2196F3", fontSize: "0.85rem" }}>
+              ⏳ Buscando...
+            </div>
+          )}
+
+          {mostrarLista && !cargando && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                background: "#fff",
+                border: "1px solid #ddd",
+                borderRadius: "6px",
+                marginTop: "0.25rem",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 1000,
+                maxHeight: "300px",
+                overflowY: "auto",
+              }}
+            >
+              {clientes.length > 0 ? (
+                <>
+                  {clientes.map((cliente) => (
+                    <div
+                      key={cliente.id}
+                      onClick={() => seleccionarCliente(cliente)}
+                      style={{
+                        padding: "0.75rem 1rem",
+                        borderBottom: "1px solid #f0f0f0",
+                        cursor: "pointer",
+                        transition: "background 0.15s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                    >
+                      <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
+                        {cliente.nombre}
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "#888" }}>
+                        {cliente.ci ? `CI: ${cliente.ci}` : "Sin CI"} • {cliente.tipo}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div style={{ padding: "1rem", textAlign: "center", color: "#aaa" }}>
+                  <p style={{ margin: "0.5rem 0" }}>No se encontraron resultados</p>
+                  {busqueda.trim().length >= 3 && (
+                    <button
+                      onClick={abrirModalRegistro}
+                      style={{
+                        ...btnStyle("#FF9800"),
+                        width: "100%",
+                        marginTop: "0.5rem",
+                      }}
+                    >
+                      ➕ Registrar como nuevo cliente
+                    </button>
+                  )}
                 </div>
-              ))}
-            </>
-          ) : (
-            <div style={{ padding: "1rem", textAlign: "center", color: "#aaa" }}>
-              <p style={{ margin: "0.5rem 0" }}>No se encontraron resultados</p>
-              {busqueda.trim().length >= 3 && (
-                <button
-                  onClick={abrirModalRegistro}
-                  style={{
-                    ...btnStyle("#FF9800"),
-                    width: "100%",
-                    marginTop: "0.5rem",
-                  }}
-                >
-                  ➕ Registrar como nuevo cliente
-                </button>
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {clienteSeleccionado && (
-        <div
-          style={{
-            marginTop: "0.5rem",
-            padding: "0.5rem 0.75rem",
-            background: "#e8f5e9",
-            borderRadius: "4px",
-            fontSize: "0.85rem",
-            color: "#2e7d32",
-          }}
-        >
-          ✅ {clienteSeleccionado.nombre} ({clienteSeleccionado.tipo})
-        </div>
+        </>
       )}
 
       {mostrarModal && (

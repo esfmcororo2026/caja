@@ -18,7 +18,14 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     window.location.href = "/caja/";
     return null;
   }
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(data?.error || `HTTP ${res.status}`);
+    error.status = res.status;
+    error.data = data;
+    throw error;
+  }
+  return data;
 }
 
 export const api = {
