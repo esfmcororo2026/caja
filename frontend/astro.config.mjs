@@ -4,7 +4,7 @@ import react from "@astrojs/react";
 export default defineConfig({
   integrations: [react()],
   output: "static",
-  base: "/caja",
+  base: "/",
   build: {
     assets: "assets",
     outDir: "../../dist",
