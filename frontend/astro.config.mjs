@@ -7,5 +7,6 @@ export default defineConfig({
   base: "/caja",
   build: {
     assets: "assets",
+    outDir: "../../dist",
   },
 });
