@@ -12,6 +12,26 @@ interface BuscadorPersonasProps {
   onSelect: (cliente: Cliente) => void;
 }
 
+const CACHE_KEY = "caja_clientes_cache";
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 horas
+
+function getCache(): { [key: string]: { clientes: Cliente[]; timestamp: number } } {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    return cached ? JSON.parse(cached) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCache(cache: { [key: string]: { clientes: Cliente[]; timestamp: number } }) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    console.warn("No se pudo guardar caché en localStorage");
+  }
+}
+
 export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
   const [busqueda, setBusqueda] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -42,10 +62,27 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
   }, [busqueda, clienteSeleccionado]);
 
   async function buscarClientes() {
+    const query = busqueda.trim().toLowerCase();
+    const cache = getCache();
+    const now = Date.now();
+
+    // Verificar si hay caché válido
+    if (cache[query] && now - cache[query].timestamp < CACHE_EXPIRY) {
+      setClientes(cache[query].clientes);
+      setMostrarLista(true);
+      return;
+    }
+
     try {
       setCargando(true);
       const resultado = await api.get(`/clientes/buscar?q=${encodeURIComponent(busqueda)}`);
-      setClientes(Array.isArray(resultado) ? resultado : []);
+      const clientesData = Array.isArray(resultado) ? resultado : [];
+      
+      // Guardar en caché
+      cache[query] = { clientes: clientesData, timestamp: now };
+      saveCache(cache);
+      
+      setClientes(clientesData);
       setMostrarLista(true);
     } catch (error: any) {
       console.error("Error al buscar clientes:", error);
@@ -97,6 +134,11 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
         ci: nuevoCi.trim() || null,
         tipo: nuevoTipo,
       });
+
+      // Limpiar caché para que se recargue con el nuevo cliente
+      const cache = getCache();
+      Object.keys(cache).forEach(key => delete cache[key]);
+      saveCache(cache);
 
       seleccionarCliente(nuevoCliente);
       setMostrarModal(false);
