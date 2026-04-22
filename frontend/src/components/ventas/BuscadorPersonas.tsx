@@ -20,6 +20,7 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoCi, setNuevoCi] = useState("");
   const [nuevoTipo, setNuevoTipo] = useState("ESTUDIANTE");
   const [guardando, setGuardando] = useState(false);
 
@@ -64,6 +65,7 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
       return;
     }
     setNuevoNombre(busqueda.toUpperCase());
+    setNuevoCi("");
     setNuevoTipo("ESTUDIANTE");
     setMostrarModal(true);
   }
@@ -78,6 +80,7 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
       setGuardando(true);
       const nuevoCliente = await api.post("/clientes", {
         nombre: nuevoNombre.toUpperCase(),
+        ci: nuevoCi.trim() || null,
         tipo: nuevoTipo,
       });
 
@@ -251,6 +254,19 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
                 value={nuevoNombre}
                 onChange={(e) => setNuevoNombre(e.target.value.toUpperCase())}
                 placeholder="Nombre del cliente"
+                disabled={guardando}
+              />
+            </div>
+
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ fontSize: "0.85rem", color: "#666", display: "block", marginBottom: "0.4rem" }}>
+                CI (opcional)
+              </label>
+              <input
+                style={inputStyle}
+                value={nuevoCi}
+                onChange={(e) => setNuevoCi(e.target.value)}
+                placeholder="Número de cédula"
                 disabled={guardando}
               />
             </div>
