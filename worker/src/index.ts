@@ -8,6 +8,7 @@ import ventasRoute from "./routes/ventas";
 import inventarioRoute from "./routes/inventario";
 import reportesRoute from "./routes/reportes";
 import syncRoute from "./routes/sync";
+import clientesRoute from "./routes/clientes";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -20,6 +21,7 @@ app.route("/api/ventas", ventasRoute);
 app.route("/api/inventario", inventarioRoute);
 app.route("/api/reportes", reportesRoute);
 app.route("/api/sync", syncRoute);
+app.route("/api/clientes", clientesRoute);
 
 app.get("/", (c) => c.json({ status: "ok", version: "1.0.0" }));
 

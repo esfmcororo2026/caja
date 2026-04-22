@@ -2,29 +2,56 @@ import { useState, useEffect } from "react";
 import { requireAuth, getUser } from "../../lib/auth";
 import { api } from "../../lib/api";
 import NavLayout from "../shared/NavLayout";
+import BuscadorPersonas from "./BuscadorPersonas";
 
 export default function Ventas() {
   const [items, setItems] = useState<any[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
-  const [clientes, setClientes] = useState<any[]>([]);
   const [unidades, setUnidades] = useState<any[]>([]);
   const [catActiva, setCatActiva] = useState<number | null>(null);
   const [carrito, setCarrito] = useState<any[]>([]);
-  const [clienteBusqueda, setClienteBusqueda] = useState("");
-  const [clienteId, setClienteId] = useState<number | null>(null);
-  const [clienteNombre, setClienteNombre] = useState("");
+  const [personaSeleccionada, setPersonaSeleccionada] = useState<any>(null);
   const [ventaOk, setVentaOk] = useState<any>(null);
   const user = getUser();
 
   useEffect(() => { requireAuth(); loadData(); }, []);
 
   async function loadData() {
-    const [i, c, cl, u] = await Promise.all([api.get("/catalogo/items"), api.get("/catalogo/categorias"), api.get("/ventas/clientes"), api.get("/catalogo/unidades")]);
+    const [i, c, u] = await Promise.all([
+      api.get("/catalogo/items"),
+      api.get("/catalogo/categorias"),
+      api.get("/catalogo/unidades")
+    ]);
     setItems(i || []);
     setCategorias(c || []);
-    setClientes(cl || []);
     setUnidades(u || []);
     if (c?.length) setCatActiva(c[0].id);
+  }
+
+  function handlePersonaSelect(persona: any) {
+    setPersonaSeleccionada(persona);
+  }
+
+  async function handleRegistroNuevo(nombre: string) {
+    try {
+      const ci = prompt("Ingresa el CI de la persona:");
+      if (!ci) return;
+      
+      const tipo = confirm("¿Es estudiante? (OK=Estudiante, Cancelar=Personal)") ? "ESTUDIANTE" : "PERSONAL";
+      
+      const nuevaPersona = await api.post("/personas", {
+        nombre: nombre.toUpperCase(),
+        ci,
+        tipo,
+      });
+      
+      if (nuevaPersona?.id) {
+        handlePersonaSelect(nuevaPersona);
+        alert("✅ Persona registrada exitosamente");
+      }
+    } catch (error) {
+      alert("Error al registrar persona: " + (error as any).message);
+    }
   }
 
   function agregarItem(item: any) {
@@ -42,14 +69,28 @@ export default function Ventas() {
   }
 
   const total = carrito.reduce((s, c) => s + c.subtotal, 0);
-  const clientesFiltrados = clientes.filter(c => c.nombre.toLowerCase().includes(clienteBusqueda.toLowerCase())).slice(0, 5);
 
   async function realizarVenta() {
     if (!carrito.length) return alert("El carrito está vacío");
-    const res = await api.post("/ventas", { cliente_id: clienteId, usuario_id: user?.id, total, detalle: carrito });
+    if (!personaSeleccionada) return alert("Selecciona una persona");
+    
+    const res = await api.post("/ventas", { 
+      persona_id: personaSeleccionada.id, 
+      usuario_id: user?.id, 
+      total, 
+      detalle: carrito 
+    });
+    
     if (res?.id) {
-      setVentaOk({ id: res.id, carrito, total, cliente: clienteNombre || "Sin nombre", fecha: new Date().toLocaleString() });
-      setCarrito([]); setClienteId(null); setClienteNombre(""); setClienteBusqueda("");
+      setVentaOk({ 
+        id: res.id, 
+        carrito, 
+        total, 
+        persona: personaSeleccionada.nombre, 
+        fecha: new Date().toLocaleString() 
+      });
+      setCarrito([]);
+      setPersonaSeleccionada(null);
     }
   }
 
@@ -63,7 +104,7 @@ export default function Ventas() {
       </head><body>
       <h2>CAJA ESFM</h2><p>Sistema de Ventas</p><hr/>
       <p><b>Recibo #${ventaOk.id}</b></p>
-      <p>Cliente: ${ventaOk.cliente}</p>
+      <p>Persona: ${ventaOk.persona}</p>
       <p>Fecha: ${ventaOk.fecha}</p><hr/>
       <table>${ventaOk.carrito.map((i: any) => `<tr><td><b>${i.nombre}</b></td><td>${i.cantidad} ${i.unidad}</td><td>Bs. ${i.subtotal.toFixed(2)}</td></tr>${i.num_desde ? `<tr><td colspan="3" style="font-size:0.85em;color:#555">&nbsp;&nbsp;Nums: ${i.num_desde} al ${i.num_hasta}</td></tr>` : ""}`).join("")}</table>
       <hr/><p class="total">TOTAL: Bs. ${ventaOk.total.toFixed(2)}</p>
@@ -90,20 +131,10 @@ export default function Ventas() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem" }}>
         <div>
           <div style={{ background: "#fff", borderRadius: "8px", padding: "1rem", marginBottom: "1rem", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-            <label style={{ fontSize: "0.8rem", color: "#666", display: "block", marginBottom: "0.4rem" }}>Cliente</label>
-            <input style={inputStyle} value={clienteBusqueda} onChange={e => { setClienteBusqueda(e.target.value); setClienteId(null); setClienteNombre(e.target.value); }} placeholder="Buscar o escribir nombre..." />
-            {clienteBusqueda && !clienteId && clientesFiltrados.length > 0 && (
-              <div style={{ background: "#fff", border: "1px solid #ddd", borderRadius: "6px", marginTop: "0.25rem" }}>
-                {clientesFiltrados.map(c => (
-                  <div key={c.id} onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteBusqueda(c.nombre); }}
-                    style={{ padding: "0.6rem 1rem", cursor: "pointer", borderBottom: "1px solid #f0f0f0", fontSize: "0.9rem" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "#f5f5f5")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "#fff")}>
-                    {c.nombre} — {c.tipo}
-                  </div>
-                ))}
-              </div>
-            )}
+            <BuscadorPersonas
+              onSelect={handlePersonaSelect}
+              onRegistroNuevo={handleRegistroNuevo}
+            />
           </div>
 
           <div style={{ background: "#fff", borderRadius: "8px", padding: "1rem", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
