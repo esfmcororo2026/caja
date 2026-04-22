@@ -97,8 +97,24 @@ router.post('/', async (c) => {
       return c.json({ error: 'Campo requerido: nombre' }, 400);
     }
 
-    await query(c.env, `INSERT INTO clientes (nombre, ci, tipo) VALUES (?, ?, ?)`, [nombre.toUpperCase(), ci || null, tipo || 'otro']);
-    const result = await query(c.env, `SELECT id, nombre, ci, tipo FROM clientes WHERE nombre = ? ORDER BY id DESC LIMIT 1`, [nombre.toUpperCase()]);
+    const nombreUpper = nombre.toUpperCase();
+
+    // Verificar si ya existe un cliente con el mismo nombre
+    const existeNombre = await query(c.env, `SELECT id FROM clientes WHERE nombre = ? AND activo = 1`, [nombreUpper]);
+    if (existeNombre.rows.length > 0) {
+      return c.json({ error: 'Ya existe un cliente con este nombre' }, 409);
+    }
+
+    // Verificar si ya existe un cliente con el mismo CI (si se proporciona)
+    if (ci && ci.trim()) {
+      const existeCi = await query(c.env, `SELECT id FROM clientes WHERE ci = ? AND activo = 1`, [ci.trim()]);
+      if (existeCi.rows.length > 0) {
+        return c.json({ error: 'Ya existe un cliente con este CI' }, 409);
+      }
+    }
+
+    await query(c.env, `INSERT INTO clientes (nombre, ci, tipo) VALUES (?, ?, ?)`, [nombreUpper, ci && ci.trim() ? ci.trim() : null, tipo || 'otro']);
+    const result = await query(c.env, `SELECT id, nombre, ci, tipo FROM clientes WHERE nombre = ? ORDER BY id DESC LIMIT 1`, [nombreUpper]);
 
     return c.json(result.rows[0], 201);
   } catch (error: any) {
@@ -115,7 +131,23 @@ router.put('/:id', async (c) => {
       return c.json({ error: 'Campo requerido: nombre' }, 400);
     }
 
-    await query(c.env, `UPDATE clientes SET nombre = ?, ci = ?, tipo = ? WHERE id = ?`, [nombre.toUpperCase(), ci || null, tipo || 'otro', id]);
+    const nombreUpper = nombre.toUpperCase();
+
+    // Verificar si otro cliente ya tiene este nombre
+    const existeNombre = await query(c.env, `SELECT id FROM clientes WHERE nombre = ? AND id != ? AND activo = 1`, [nombreUpper, id]);
+    if (existeNombre.rows.length > 0) {
+      return c.json({ error: 'Ya existe otro cliente con este nombre' }, 409);
+    }
+
+    // Verificar si otro cliente ya tiene este CI
+    if (ci && ci.trim()) {
+      const existeCi = await query(c.env, `SELECT id FROM clientes WHERE ci = ? AND id != ? AND activo = 1`, [ci.trim(), id]);
+      if (existeCi.rows.length > 0) {
+        return c.json({ error: 'Ya existe otro cliente con este CI' }, 409);
+      }
+    }
+
+    await query(c.env, `UPDATE clientes SET nombre = ?, ci = ?, tipo = ? WHERE id = ?`, [nombreUpper, ci && ci.trim() ? ci.trim() : null, tipo || 'otro', id]);
     const result = await query(c.env, `SELECT id, nombre, ci, tipo FROM clientes WHERE id = ?`, [id]);
 
     if (result.rows.length === 0) {

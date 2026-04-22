@@ -23,6 +23,7 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
   const [nuevoCi, setNuevoCi] = useState("");
   const [nuevoTipo, setNuevoTipo] = useState("ESTUDIANTE");
   const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState("");
 
   useEffect(() => {
     if (busqueda.trim().length < 2) {
@@ -67,17 +68,19 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
     setNuevoNombre(busqueda.toUpperCase());
     setNuevoCi("");
     setNuevoTipo("ESTUDIANTE");
+    setErrorModal("");
     setMostrarModal(true);
   }
 
   async function guardarNuevoCliente() {
     if (!nuevoNombre.trim()) {
-      alert("El nombre es obligatorio");
+      setErrorModal("El nombre es obligatorio");
       return;
     }
 
     try {
       setGuardando(true);
+      setErrorModal("");
       const nuevoCliente = await api.post("/clientes", {
         nombre: nuevoNombre.toUpperCase(),
         ci: nuevoCi.trim() || null,
@@ -89,9 +92,14 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
       setMostrarModal(false);
       setMostrarLista(false);
       onSelect(nuevoCliente);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al registrar cliente:", error);
-      alert("Error al registrar el cliente");
+      
+      if (error.response?.status === 409) {
+        setErrorModal(error.response?.data?.error || "Este cliente ya existe");
+      } else {
+        setErrorModal("Error al registrar el cliente");
+      }
     } finally {
       setGuardando(false);
     }
@@ -244,6 +252,22 @@ export default function BuscadorPersonas({ onSelect }: BuscadorPersonasProps) {
             <h2 style={{ margin: "0 0 1.5rem 0", fontSize: "1.3rem", color: "#333" }}>
               Registrar nuevo cliente
             </h2>
+
+            {errorModal && (
+              <div
+                style={{
+                  marginBottom: "1rem",
+                  padding: "0.75rem",
+                  background: "#ffebee",
+                  border: "1px solid #ef5350",
+                  borderRadius: "4px",
+                  color: "#c62828",
+                  fontSize: "0.85rem",
+                }}
+              >
+                ⚠️ {errorModal}
+              </div>
+            )}
 
             <div style={{ marginBottom: "1.5rem" }}>
               <label style={{ fontSize: "0.85rem", color: "#666", display: "block", marginBottom: "0.4rem" }}>
