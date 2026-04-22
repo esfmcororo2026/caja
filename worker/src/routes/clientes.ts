@@ -3,7 +3,6 @@ import { Env, query } from '../db/client';
 
 const router = new Hono<{ Bindings: Env }>();
 
-// POST - Importar clientes desde backup (DEBE IR ANTES DE /:id)
 router.post('/importar/backup', async (c) => {
   try {
     const clientes = await c.req.json();
@@ -54,7 +53,6 @@ router.post('/importar/backup', async (c) => {
   }
 });
 
-// GET - Buscar clientes por nombre
 router.get('/buscar', async (c) => {
   try {
     const q = c.req.query('q');
@@ -72,7 +70,6 @@ router.get('/buscar', async (c) => {
   }
 });
 
-// GET - Obtener todos los clientes
 router.get('/', async (c) => {
   try {
     const result = await query(c.env, `SELECT id, nombre, ci, tipo FROM clientes WHERE activo = 1 ORDER BY nombre ASC`);
@@ -82,7 +79,6 @@ router.get('/', async (c) => {
   }
 });
 
-// GET - Obtener cliente por ID
 router.get('/:id', async (c) => {
   try {
     const id = c.req.param('id');
@@ -98,7 +94,6 @@ router.get('/:id', async (c) => {
   }
 });
 
-// POST - Crear nuevo cliente
 router.post('/', async (c) => {
   try {
     const { nombre, ci, tipo } = await c.req.json();
@@ -116,7 +111,6 @@ router.post('/', async (c) => {
   }
 });
 
-// PUT - Actualizar cliente
 router.put('/:id', async (c) => {
   try {
     const id = c.req.param('id');
@@ -139,9 +133,9 @@ router.put('/:id', async (c) => {
   }
 });
 
-// DELETE - Eliminar cliente (soft delete)
 router.delete('/:id', async (c) => {
-  try {\n    const id = c.req.param('id');
+  try {
+    const id = c.req.param('id');
     await query(c.env, `UPDATE clientes SET activo = 0 WHERE id = ?`, [id]);
     return c.json({ success: true });
   } catch (error: any) {
