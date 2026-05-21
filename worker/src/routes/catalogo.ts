@@ -34,9 +34,21 @@ route.delete("/categorias/:id", async (c) => {
 });
 
 route.get("/items", async (c) => {
-  const r = await query(c.env, "SELECT * FROM items WHERE activo = 1");
+  const r = await query(c.env, `
+    SELECT 
+      i.*,
+      c.nombre as codigo_nombre,
+      cat.nombre as categoria_nombre,
+      u.nombre as unidad_nombre
+    FROM items i
+    LEFT JOIN codigos c ON i.codigo_id = c.id
+    LEFT JOIN categorias cat ON i.categoria_id = cat.id
+    LEFT JOIN unidades u ON i.unidad_id = u.id
+    WHERE i.activo = 1
+  `);
   return c.json(r.rows);
 });
+
 
 route.post("/items", async (c) => {
   try {

@@ -355,7 +355,7 @@ export default function Catalogo() {
                   </td>
                   <td style={{ padding: "0.75rem" }}>
                     <span style={{ background: i.tiene_stock ? (i.stock_actual <= 5 ? "#ffebee" : "#e8f5e9") : "#f5f5f5", color: i.tiene_stock ? (i.stock_actual <= 5 ? "#c62828" : "#2e7d32") : "#999", padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: "bold", fontSize: "0.85rem" }}>
-                      {i.tiene_stock ? i.stock_actual : "∞"}
+                      {i.tiene_stock ? (i.numeracion_fin ? `${i.numeracion_fin - i.numeracion_inicio + 1}` : i.stock_actual) : "∞"}                      
                     </span>
                   </td>
                   <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
