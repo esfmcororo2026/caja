@@ -335,8 +335,9 @@ export default function Catalogo() {
                 <button style={btnStyle("#4CAF50")} onClick={saveItem}>GUARDAR ITEM</button>
                 {editId && <button style={btnStyle("#999")} onClick={resetForm}>CANCELAR</button>}
               </div>
-              <FiltrosItems items={items} categorias={categorias} codigos={codigos} onFiltrar={setItemsFiltrados} />
             </div>
+
+            <FiltrosItems items={items} categorias={categorias} codigos={codigos} onFiltrar={setItemsFiltrados} />
 
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
