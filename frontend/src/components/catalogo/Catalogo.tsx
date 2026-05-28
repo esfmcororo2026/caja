@@ -352,7 +352,7 @@ export default function Catalogo() {
                 <tr key={i.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "0.75rem", fontWeight: "bold" }}>{i.nombre}</td>
                   <td style={{ padding: "0.75rem", fontSize: "0.85rem", color: "#1565c0" }}>{i.codigo_nombre || "—"}</td>
-                  <td style={{ padding: "0.75rem", color: "#666" }}>{i.categoria}</td>
+                  <td style={{ padding: "0.75rem", color: "#666" }}>{i.categoria_nombre}</td>
                   <td style={{ padding: "0.75rem" }}>BS. {Number(i.precio).toFixed(2)}</td>
                   <td style={{ padding: "0.75rem", fontSize: "0.85rem" }}>
                     {i.numeracion_inicio ? `${i.numeracion_inicio} - ${i.numeracion_fin} (ACTUAL: ${i.numeracion_actual})` : "—"}
