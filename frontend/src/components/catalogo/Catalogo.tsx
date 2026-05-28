@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { requireAuth } from "../../lib/auth";
 import { api } from "../../lib/api";
 import NavLayout from "../shared/NavLayout";
+import FiltrosItems from "./FiltrosItems";
 
 const toUpperCase = (str: string) => str ? str.toUpperCase() : "";
 
