@@ -14,8 +14,10 @@ export default function Catalogo() {
   const [form, setForm] = useState<any>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [msg, setMsg] = useState("");
+  const [itemsFiltrados, setItemsFiltrados] = useState<any[]>([]);
 
   useEffect(() => { requireAuth(); loadAll(); }, []);
+  useEffect(() => { setItemsFiltrados(items); }, [items]);
 
   async function loadAll() {
     const [co, ca, i, u] = await Promise.all([
@@ -332,6 +334,7 @@ export default function Catalogo() {
                 <button style={btnStyle("#4CAF50")} onClick={saveItem}>GUARDAR ITEM</button>
                 {editId && <button style={btnStyle("#999")} onClick={resetForm}>CANCELAR</button>}
               </div>
+              <FiltrosItems items={items} categorias={categorias} codigos={codigos} onFiltrar={setItemsFiltrados} />
             </div>
 
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
