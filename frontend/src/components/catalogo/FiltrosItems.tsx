@@ -11,10 +11,10 @@ export default function FiltrosItems({ items, categorias, onFiltrar }: FiltrosIt
   const [busqueda, setBusqueda] = useState("");
 
   function aplicarFiltros() {
-    let resultado = items;
-    console.log("Filtrando con categoria_id:", filtroCategoria, "items:", items.length);
+    let resultado = [...items];
+
     if (filtroCategoria) {
-      resultado = resultado.filter(i => i.categoria_id === filtroCategoria);
+      resultado = resultado.filter(i => Number(i.categoria_id) === Number(filtroCategoria));
     }
 
     if (busqueda) {
@@ -24,14 +24,33 @@ export default function FiltrosItems({ items, categorias, onFiltrar }: FiltrosIt
     onFiltrar(resultado);
   }
 
-  const handleFiltroCategoria = (val: number | null) => {
-    setFiltroCategoria(val);
-    setTimeout(aplicarFiltros, 0);
+  const handleFiltroCategoria = (val: string) => {
+    const numVal = val ? Number(val) : null;
+    setFiltroCategoria(numVal);
+    setTimeout(() => {
+      let resultado = [...items];
+      if (numVal) {
+        resultado = resultado.filter(i => Number(i.categoria_id) === numVal);
+      }
+      if (busqueda) {
+        resultado = resultado.filter(i => i.nombre.toUpperCase().includes(busqueda.toUpperCase()));
+      }
+      onFiltrar(resultado);
+    }, 0);
   };
 
   const handleBusqueda = (val: string) => {
     setBusqueda(val);
-    setTimeout(aplicarFiltros, 0);
+    setTimeout(() => {
+      let resultado = [...items];
+      if (filtroCategoria) {
+        resultado = resultado.filter(i => Number(i.categoria_id) === Number(filtroCategoria));
+      }
+      if (val) {
+        resultado = resultado.filter(i => i.nombre.toUpperCase().includes(val.toUpperCase()));
+      }
+      onFiltrar(resultado);
+    }, 0);
   };
 
   const limpiarFiltros = () => {
@@ -51,7 +70,7 @@ export default function FiltrosItems({ items, categorias, onFiltrar }: FiltrosIt
       </div>
       <div>
         <label style={{ fontSize: "0.8rem", color: "#666" }}>🗂 FILTRAR CATEGORÍA</label>
-        <select style={inputStyle} value={filtroCategoria || ""} onChange={e => handleFiltroCategoria(e.target.value ? Number(e.target.value) : null)}>
+        <select style={inputStyle} value={filtroCategoria || ""} onChange={e => handleFiltroCategoria(e.target.value)}>
           <option value="">TODAS</option>
           {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </select>
