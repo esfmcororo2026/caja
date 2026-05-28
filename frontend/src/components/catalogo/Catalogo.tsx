@@ -237,7 +237,7 @@ export default function Catalogo() {
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>NOMBRE</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>UNIDAD</th>
                 <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>ABREVIATURA</th>
                 <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>ACCIONES</th>
               </tr></thead>
