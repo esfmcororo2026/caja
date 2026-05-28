@@ -348,7 +348,7 @@ export default function Catalogo() {
                 <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>STOCK</th>
                 <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>ACCIONES</th>
               </tr></thead>
-              <tbody>{items.map(i => (
+              <tbody>{itemsFiltrados.map(i => (
                 <tr key={i.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "0.75rem", fontWeight: "bold" }}>{i.nombre}</td>
                   <td style={{ padding: "0.75rem", fontSize: "0.85rem", color: "#1565c0" }}>{i.codigo_nombre || "—"}</td>
