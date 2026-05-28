@@ -155,7 +155,7 @@ export default function Catalogo() {
 
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>NOMBRE</th>
+                <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>CÓDIGO</th>
                 <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>DESCRIPCIÓN</th>
                 <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>NUMERACIÓN</th>
                 <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.85rem" }}>PRECIO</th>
