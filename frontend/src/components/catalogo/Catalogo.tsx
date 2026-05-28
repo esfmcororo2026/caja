@@ -76,7 +76,7 @@ export default function Catalogo() {
   const codigoSeleccionado = codigos.find(c => c.id === Number(form.codigo_id));
 
   async function saveItem() {
-    const itemData = { ...form, nombre: toUpperCase(form.nombre) };
+  const itemData = { ...form, nombre: toUpperCase(form.nombre), tiene_stock: 1 };
     if (!itemData.codigo_id || itemData.codigo_id === 0) {
       delete itemData.codigo_id;
     }
