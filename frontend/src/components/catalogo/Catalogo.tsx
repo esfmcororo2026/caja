@@ -357,11 +357,11 @@ export default function Catalogo() {
                   <td style={{ padding: "0.75rem", color: "#666" }}>{i.categoria_nombre}</td>
                   <td style={{ padding: "0.75rem" }}>BS. {Number(i.precio).toFixed(2)}</td>
                   <td style={{ padding: "0.75rem", fontSize: "0.85rem" }}>
-                    {i.numeracion_inicio ? `${i.numeracion_inicio} - ${i.numeracion_fin} (ACTUAL: ${i.numeracion_actual})` : "—"}
+                    {i.numeracion_inicio > 0 ? `${i.numeracion_inicio} - ${i.numeracion_fin} (ACTUAL: ${i.numeracion_actual})` : "—"}
                   </td>
                   <td style={{ padding: "0.75rem" }}>
                     {(() => {
-                      const tieneNumeracion = !!i.numeracion_inicio && !!i.numeracion_fin;
+                      const tieneNumeracion = i.numeracion_inicio > 0 && i.numeracion_fin > 0;
                       const stock = tieneNumeracion ? (i.numeracion_fin - i.numeracion_inicio + 1) : null;
                       const bg = tieneNumeracion ? (stock! <= 5 ? "#ffebee" : "#e8f5e9") : "#e3f2fd";
                       const color = tieneNumeracion ? (stock! <= 5 ? "#c62828" : "#2e7d32") : "#1565c0";
