@@ -12,7 +12,7 @@ export default function FiltrosItems({ items, categorias, onFiltrar }: FiltrosIt
 
   function aplicarFiltros() {
     let resultado = items;
-
+    console.log("Filtrando con categoria_id:", filtroCategoria, "items:", items.length);
     if (filtroCategoria) {
       resultado = resultado.filter(i => i.categoria_id === filtroCategoria);
     }
