@@ -79,7 +79,8 @@ export default function Catalogo() {
   const codigoSeleccionado = codigos.find(c => c.id === Number(form.codigo_id));
 
   async function saveItem() {
-  const itemData = { ...form, nombre: toUpperCase(form.nombre), tiene_stock: 1 };
+    const tieneNumeracion = !!(form.numeracion_inicio && form.numeracion_fin);
+    const itemData = { ...form, nombre: toUpperCase(form.nombre), tiene_stock: tieneNumeracion ? 1 : 0 };
     if (!itemData.codigo_id || itemData.codigo_id === 0) {
       delete itemData.codigo_id;
     }
@@ -359,9 +360,17 @@ export default function Catalogo() {
                     {i.numeracion_inicio ? `${i.numeracion_inicio} - ${i.numeracion_fin} (ACTUAL: ${i.numeracion_actual})` : "—"}
                   </td>
                   <td style={{ padding: "0.75rem" }}>
-                    <span style={{ background: i.tiene_stock ? (i.stock_actual <= 5 ? "#ffebee" : "#e8f5e9") : "#f5f5f5", color: i.tiene_stock ? (i.stock_actual <= 5 ? "#c62828" : "#2e7d32") : "#999", padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: "bold", fontSize: "0.85rem" }}>
-                      {i.tiene_stock ? (i.numeracion_fin ? `${i.numeracion_fin - i.numeracion_inicio + 1}` : i.stock_actual) : "∞"}                      
-                    </span>
+                    {(() => {
+                      const tieneNumeracion = !!i.numeracion_inicio && !!i.numeracion_fin;
+                      const stock = tieneNumeracion ? (i.numeracion_fin - i.numeracion_inicio + 1) : null;
+                      const bg = tieneNumeracion ? (stock! <= 5 ? "#ffebee" : "#e8f5e9") : "#e3f2fd";
+                      const color = tieneNumeracion ? (stock! <= 5 ? "#c62828" : "#2e7d32") : "#1565c0";
+                      return (
+                        <span style={{ background: bg, color, padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: "bold", fontSize: "0.85rem" }}>
+                          {tieneNumeracion ? stock : "∞"}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem", justifyContent: "center" }}>
                     <button style={btnStyle("#2196F3")} onClick={() => { setForm({ ...i, tiene_stock: i.tiene_stock === 1 }); setEditId(i.id); }}>EDITAR</button>
