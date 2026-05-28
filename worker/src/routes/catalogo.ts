@@ -82,16 +82,17 @@ route.post("/items", async (c) => {
 
 route.put("/items/:id", async (c) => {
   try {
-    const { nombre, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin, usuario_id } = await c.req.json();
+    const { nombre, codigo_id, categoria_id, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin, usuario_id } = await c.req.json();
     const current = await query(c.env, "SELECT precio FROM items WHERE id = ?", [c.req.param("id")]);
     if (current.rows.length && current.rows[0].precio !== precio) {
       await query(c.env, "INSERT INTO precios_historial (item_id, precio_anterior, precio_nuevo, usuario_id) VALUES (?, ?, ?, ?)", [c.req.param("id"), current.rows[0].precio, precio, usuario_id]);
     }
     let stockCalc = stock_actual;
     if (numeracion_inicio && numeracion_fin) stockCalc = numeracion_fin - numeracion_inicio + 1;
+    const finalCodigoId = codigo_id && codigo_id > 0 ? codigo_id : null;
     await query(c.env,
-      "UPDATE items SET nombre = ?, precio = ?, unidad_id = ?, tiene_stock = ?, stock_actual = ?, numeracion_inicio = ?, numeracion_fin = ? WHERE id = ?",
-      [toUpperCase(nombre), precio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, c.req.param("id")]
+      "UPDATE items SET nombre = ?, codigo_id = ?, categoria_id = ?, precio = ?, unidad_id = ?, tiene_stock = ?, stock_actual = ?, numeracion_inicio = ?, numeracion_fin = ? WHERE id = ?",
+      [toUpperCase(nombre), finalCodigoId, categoria_id, precio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, c.req.param("id")]
     );
     return c.json({ ok: true });
   } catch (e: any) {
