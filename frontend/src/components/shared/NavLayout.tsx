@@ -19,7 +19,7 @@ export default function NavLayout({ titulo, children }: Props) {
         </div>
       </nav>
       <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-        <h1 style={{ color: "#1a1a2e", fontSize: "2.5rem", fontWeight: "bold", textAlign: "center", marginBottom: "2rem" }}>{titulo}</h1>
+       <h1 style={{ color: "#1a1a2e", fontSize: "2.8rem", fontWeight: "bold", textAlign: "center", margin: "2rem 0", letterSpacing: "2px" }}>{titulo}</h1>
         {children}
       </div>
     </div>
