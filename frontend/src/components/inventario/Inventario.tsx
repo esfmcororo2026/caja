@@ -9,6 +9,7 @@ export default function Inventario() {
   const [itemsConNumeracion, setItemsConNumeracion] = useState<any[]>([]);
   const [tab, setTab] = useState<"stock" | "movimientos" | "nuevo_lote">("stock");
   const [formLote, setFormLote] = useState<any>({});
+  const [lotesDelItem, setLotesDelItem] = useState<any[]>([]);
   const [desde, setDesde] = useState(new Date().toISOString().split("T")[0]);
   const [hasta, setHasta] = useState(new Date().toISOString().split("T")[0]);
   const hoy = new Date().toISOString().split("T")[0];
@@ -32,6 +33,14 @@ export default function Inventario() {
   async function loadMovimientos() {
     const r = await api.get(`/inventario/movimientos?desde=${desde}&hasta=${hasta}`);
     setMovimientos(r || []);
+  }
+
+  async function onSelectItem(item_id: number) {
+    setFormLote({ ...formLote, item_id });
+    if (!item_id) { setLotesDelItem([]); return; }
+    const r = await api.get("/inventario/stock");
+    const lotes = (r || []).filter((l: any) => l.item_id === item_id);
+    setLotesDelItem(lotes);
   }
 
   async function agregarLote() {
@@ -235,11 +244,38 @@ export default function Inventario() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", maxWidth: "600px" }}>
               <div style={{ gridColumn: "span 2" }}>
                 <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM</label>
-                <select style={inputStyle} value={formLote.item_id || ""} onChange={e => setFormLote({ ...formLote, item_id: Number(e.target.value) })}>
+                <select style={inputStyle} value={formLote.item_id || ""} onChange={e => onSelectItem(Number(e.target.value))}>
                   <option value="">Seleccionar item...</option>
                   {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
                 </select>
               </div>
+
+              {/* Lotes existentes del item seleccionado */}
+              {lotesDelItem.length > 0 && (
+                <div style={{ gridColumn: "span 2", background: "#fff8e1", border: "1px solid #FFD54F", borderRadius: "8px", padding: "0.75rem 1rem" }}>
+                  <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#e65100", marginBottom: "0.5rem" }}>⚠️ LOTES EXISTENTES — asegúrate de no repetir numeración:</p>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr>
+                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>LOTE</th>
+                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>NUMERACIÓN</th>
+                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>ACTUAL DESDE</th>
+                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "center", fontSize: "0.75rem", color: "#888" }}>STOCK</th>
+                    </tr></thead>
+                    <tbody>{lotesDelItem.map((l: any, idx: number) => (
+                      <tr key={l.lote_id} style={{ borderTop: "1px solid #FFE082" }}>
+                        <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", color: "#666" }}>Lote #{idx + 1}</td>
+                        <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", fontWeight: "bold" }}>{l.numeracion_inicio} — {l.numeracion_fin}</td>
+                        <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", color: "#1565c0" }}>{l.numeracion_actual}</td>
+                        <td style={{ padding: "0.3rem 0.5rem", textAlign: "center" }}>
+                          <span style={{ background: l.stock_actual <= 5 ? "#ffebee" : "#e8f5e9", color: l.stock_actual <= 5 ? "#c62828" : "#2e7d32", padding: "0.1rem 0.5rem", borderRadius: "8px", fontWeight: "bold", fontSize: "0.82rem" }}>
+                            {l.stock_actual}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
               <div>
                 <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN INICIO</label>
                 <input type="number" style={inputStyle} value={formLote.numeracion_inicio || ""} onChange={e => setFormLote({ ...formLote, numeracion_inicio: Number(e.target.value) })} placeholder="ej: 001" />
