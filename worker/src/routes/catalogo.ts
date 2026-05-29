@@ -39,7 +39,13 @@ route.get("/items", async (c) => {
       i.*,
       c.nombre as codigo_nombre,
       cat.nombre as categoria_nombre,
-      u.nombre as unidad_nombre
+      u.nombre as unidad_nombre,
+      COALESCE((
+        SELECT SUM(l.stock_actual) FROM item_lotes l WHERE l.item_id = i.id AND l.activo = 1
+      ), 0) as stock_total_lotes,
+      (
+        SELECT COUNT(*) FROM item_lotes l WHERE l.item_id = i.id AND l.activo = 1
+      ) as total_lotes
     FROM items i
     LEFT JOIN codigos c ON i.codigo_id = c.id
     LEFT JOIN categorias cat ON i.categoria_id = cat.id
@@ -54,29 +60,28 @@ route.post("/items", async (c) => {
   try {
     const body = await c.req.json();
     const { nombre, codigo_id, categoria_id, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin } = body;
-    
     if (!nombre || !categoria_id || !unidad_id) {
       return c.json({ error: "Faltan campos requeridos: nombre, categoria_id, unidad_id" }, 400);
     }
-    
+    const finalCodigoId = codigo_id && codigo_id > 0 ? codigo_id : null;
+    const sql = "INSERT INTO items (nombre, codigo_id, categoria_id, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin, numeracion_actual) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     let stockCalc = stock_actual || 0;
     let numActual = null;
     if (numeracion_inicio && numeracion_fin) {
       stockCalc = numeracion_fin - numeracion_inicio + 1;
       numActual = numeracion_inicio;
     }
-    
-    const finalCodigoId = codigo_id && codigo_id > 0 ? codigo_id : null;
-    const finalPrecio = precio || 0;
-    
-    const sql = "INSERT INTO items (nombre, codigo_id, categoria_id, precio, unidad_id, tiene_stock, stock_actual, numeracion_inicio, numeracion_fin, numeracion_actual) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    const params = [toUpperCase(nombre), finalCodigoId, categoria_id, finalPrecio, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, numActual];
-    
+    const params = [toUpperCase(nombre), finalCodigoId, categoria_id, precio || 0, unidad_id, tiene_stock ? 1 : 0, stockCalc, numeracion_inicio || null, numeracion_fin || null, numActual];
     const r = await query(c.env, sql, params);
-    return c.json({ id: r.lastInsertRowid });
+    const item_id = r.lastInsertRowid;
+    // Crear lote si tiene numeracion
+    if (numeracion_inicio && numeracion_fin) {
+      await query(c.env, "INSERT INTO item_lotes (item_id, numeracion_inicio, numeracion_fin, numeracion_actual, stock_actual) VALUES (?, ?, ?, ?, ?)",
+        [item_id, numeracion_inicio, numeracion_fin, numeracion_inicio, stockCalc]);
+    }
+    return c.json({ id: item_id });
   } catch (e: any) {
-    console.error("Error creating item:", e.message);
-    return c.json({ error: e.message, details: e.toString() }, 500);
+    return c.json({ error: e.message }, 500);
   }
 });
 

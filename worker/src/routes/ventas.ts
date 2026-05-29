@@ -22,14 +22,28 @@ route.post("/", async (c) => {
     const venta = await query(c.env, "INSERT INTO ventas (cliente_id, usuario_id, total) VALUES (?, ?, ?)", [finalClienteId, usuario_id, total]);
     const venta_id = venta.lastInsertRowid;
     for (const d of detalle) {
-      const itemR = await query(c.env, "SELECT i.numeracion_actual, i.tiene_stock, cd.tiene_numeracion FROM items i LEFT JOIN codigos cd ON i.codigo_id = cd.id WHERE i.id = ?", [d.item_id]);
+      const itemR = await query(c.env, "SELECT i.tiene_stock, cd.tiene_numeracion FROM items i LEFT JOIN codigos cd ON i.codigo_id = cd.id WHERE i.id = ?", [d.item_id]);
       const item = itemR.rows[0];
       let num_desde = null;
       let num_hasta = null;
       if (item?.tiene_numeracion) {
-        num_desde = item.numeracion_actual;
-        num_hasta = Number(item.numeracion_actual) + Number(d.cantidad) - 1;
-        await query(c.env, "UPDATE items SET numeracion_actual = ?, stock_actual = stock_actual - ? WHERE id = ?", [num_hasta + 1, d.cantidad, d.item_id]);
+        // Usar lote activo mas antiguo (FIFO)
+        const loteR = await query(c.env, "SELECT * FROM item_lotes WHERE item_id = ? AND activo = 1 AND stock_actual > 0 ORDER BY created_at ASC LIMIT 1", [d.item_id]);
+        const lote = loteR.rows[0];
+        if (lote) {
+          num_desde = lote.numeracion_actual;
+          num_hasta = Number(lote.numeracion_actual) + Number(d.cantidad) - 1;
+          const nuevoActual = num_hasta + 1;
+          const nuevoStock = Number(lote.stock_actual) - Number(d.cantidad);
+          if (nuevoStock <= 0) {
+            await query(c.env, "UPDATE item_lotes SET numeracion_actual = ?, stock_actual = 0, activo = 0 WHERE id = ?", [nuevoActual, lote.id]);
+          } else {
+            await query(c.env, "UPDATE item_lotes SET numeracion_actual = ?, stock_actual = ? WHERE id = ?", [nuevoActual, nuevoStock, lote.id]);
+          }
+          // Sincronizar stock en items con el lote activo
+          const stockTotal = await query(c.env, "SELECT COALESCE(SUM(stock_actual),0) as total FROM item_lotes WHERE item_id = ? AND activo = 1", [d.item_id]);
+          await query(c.env, "UPDATE items SET stock_actual = ?, numeracion_actual = ? WHERE id = ?", [stockTotal.rows[0].total, nuevoActual, d.item_id]);
+        }
       } else if (item?.tiene_stock) {
         await query(c.env, "UPDATE items SET stock_actual = stock_actual - ? WHERE id = ?", [d.cantidad, d.item_id]);
       }

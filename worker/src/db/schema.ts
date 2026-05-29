@@ -45,6 +45,18 @@ CREATE TABLE IF NOT EXISTS codigos (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS item_lotes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL,
+  numeracion_inicio INTEGER NOT NULL,
+  numeracion_fin INTEGER NOT NULL,
+  numeracion_actual INTEGER NOT NULL,
+  stock_actual INTEGER NOT NULL,
+  activo INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (item_id) REFERENCES items(id)
+);
+
 CREATE TABLE IF NOT EXISTS items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT NOT NULL,

@@ -6,14 +6,13 @@ import NavLayout from "../shared/NavLayout";
 export default function Inventario() {
   const [stock, setStock] = useState<any[]>([]);
   const [movimientos, setMovimientos] = useState<any[]>([]);
-  const [items, setItems] = useState<any[]>([]);
-  const [tab, setTab] = useState<"stock" | "movimientos" | "registrar">("stock");
-  const [form, setForm] = useState<any>({ tipo: "ingreso" });
+  const [itemsConNumeracion, setItemsConNumeracion] = useState<any[]>([]);
+  const [tab, setTab] = useState<"stock" | "movimientos" | "nuevo_lote">("stock");
+  const [formLote, setFormLote] = useState<any>({});
   const [desde, setDesde] = useState(new Date().toISOString().split("T")[0]);
   const [hasta, setHasta] = useState(new Date().toISOString().split("T")[0]);
   const [msg, setMsg] = useState("");
   const [busqueda, setBusqueda] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("");
   const user = getUser();
 
   useEffect(() => { requireAuth(); loadStock(); loadItems(); }, []);
@@ -25,7 +24,7 @@ export default function Inventario() {
 
   async function loadItems() {
     const r = await api.get("/catalogo/items");
-    setItems((r || []).filter((i: any) => i.numeracion_inicio > 0));
+    setItemsConNumeracion((r || []).filter((i: any) => i.numeracion_inicio > 0));
   }
 
   async function loadMovimientos() {
@@ -33,29 +32,29 @@ export default function Inventario() {
     setMovimientos(r || []);
   }
 
-  async function registrarMovimiento() {
-    if (!form.item_id) return alert("Selecciona un item");
-    if (!form.cantidad) return alert("Ingresa una cantidad");
-    await api.post("/inventario/movimientos", { ...form, usuario_id: user?.id });
-    setForm({ tipo: "ingreso" });
+  async function agregarLote() {
+    if (!formLote.item_id) return alert("Selecciona un item");
+    if (!formLote.numeracion_inicio || !formLote.numeracion_fin) return alert("Ingresa la numeración");
+    if (Number(formLote.numeracion_fin) <= Number(formLote.numeracion_inicio)) return alert("Numeración fin debe ser mayor que inicio");
+    await api.post("/inventario/lotes", { ...formLote, usuario_id: user?.id });
+    setFormLote({});
     loadStock();
-    setMsg("MOVIMIENTO REGISTRADO ✓");
+    loadItems();
+    setMsg("NUEVO LOTE REGISTRADO ✓");
     setTimeout(() => setMsg(""), 3000);
   }
 
-  // Filtrar stock
-  const stockFiltrado = stock.filter(s => {
-    const matchNombre = !busqueda || s.nombre.toUpperCase().includes(busqueda.toUpperCase());
-    const matchCat = !filtroCategoria || s.categoria === filtroCategoria;
-    return matchNombre && matchCat;
-  });
-
-  // Agrupar por categoría
-  const categorias = [...new Set(stock.map(s => s.categoria))];
-  const stockPorCategoria = categorias.reduce((acc: any, cat) => {
-    acc[cat] = stockFiltrado.filter(s => s.categoria === cat);
+  // Agrupar lotes por item
+  const stockAgrupado = stock.reduce((acc: any, lote: any) => {
+    const key = lote.item_id;
+    if (!acc[key]) acc[key] = { nombre: lote.nombre, categoria: lote.categoria, codigo: lote.codigo, unidad: lote.unidad, lotes: [] };
+    acc[key].lotes.push(lote);
     return acc;
   }, {});
+
+  const stockFiltrado = Object.values(stockAgrupado).filter((item: any) =>
+    !busqueda || item.nombre.toUpperCase().includes(busqueda.toUpperCase())
+  );
 
   const tabStyle = (t: string) => ({
     padding: "0.6rem 1.5rem", border: "none", borderRadius: "8px 8px 0 0", cursor: "pointer",
@@ -72,7 +71,7 @@ export default function Inventario() {
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0" }}>
         <button style={tabStyle("stock")} onClick={() => { setTab("stock"); loadStock(); }}>📦 STOCK ACTUAL</button>
         <button style={tabStyle("movimientos")} onClick={() => { setTab("movimientos"); loadMovimientos(); }}>📋 MOVIMIENTOS</button>
-        <button style={tabStyle("registrar")} onClick={() => setTab("registrar")}>➕ REGISTRAR MOVIMIENTO</button>
+        <button style={tabStyle("nuevo_lote")} onClick={() => setTab("nuevo_lote")}>➕ NUEVO LOTE</button>
       </div>
 
       <div style={{ background: "#fff", borderRadius: "0 8px 8px 8px", padding: "1.5rem", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
@@ -80,7 +79,6 @@ export default function Inventario() {
         {/* ===== STOCK ACTUAL ===== */}
         {tab === "stock" && (
           <>
-            {/* Filtros */}
             <div style={{ background: "#f0f0f0", borderRadius: "8px", padding: "1rem", marginBottom: "1.5rem", display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: "0.8rem", color: "#666" }}>🔍 BUSCAR POR NOMBRE</label>
@@ -92,45 +90,63 @@ export default function Inventario() {
               </button>
             </div>
 
-            {/* Tabla agrupada por categoría */}
             {stockFiltrado.length === 0 ? (
               <p style={{ color: "#aaa", textAlign: "center", padding: "2rem" }}>No hay items con stock controlado</p>
             ) : (
-              Object.entries(stockPorCategoria).filter(([, items]: any) => items.length > 0).map(([cat, items]: any) => (
-                <div key={cat} style={{ marginBottom: "1.5rem" }}>
-                  <h4 style={{ color: "#1a1a2e", background: "#f5f5f5", padding: "0.5rem 0.75rem", borderRadius: "6px", marginBottom: "0.5rem", fontSize: "0.9rem" }}>
-                    🗂 {cat}
-                  </h4>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead><tr style={{ background: "#fafafa" }}>
-                      <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", fontSize: "0.8rem", color: "#666" }}>ITEM</th>
-                      <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", fontSize: "0.8rem", color: "#666" }}>CÓDIGO</th>
-                      <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", fontSize: "0.8rem", color: "#666" }}>NUMERACIÓN</th>
-                      <th style={{ padding: "0.6rem 0.75rem", textAlign: "center", fontSize: "0.8rem", color: "#666" }}>STOCK</th>
-                      <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", fontSize: "0.8rem", color: "#666" }}>UNIDAD</th>
-                    </tr></thead>
-                    <tbody>{items.map((s: any) => {
-                      const stockReal = s.numeracion_fin - s.numeracion_actual + 1;
-                      const bajo = stockReal <= 5;
-                      return (
-                        <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                          <td style={{ padding: "0.75rem" }}>{s.nombre}</td>
-                          <td style={{ padding: "0.75rem", fontSize: "0.85rem", color: "#1565c0" }}>{s.codigo || "—"}</td>
-                          <td style={{ padding: "0.75rem", fontSize: "0.85rem", color: "#666" }}>
-                            {s.numeracion_actual} — {s.numeracion_fin}
-                          </td>
-                          <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                            <span style={{ background: bajo ? "#ffebee" : "#e8f5e9", color: bajo ? "#c62828" : "#2e7d32", padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: "bold", fontSize: "0.9rem" }}>
-                              {stockReal}
-                            </span>
-                          </td>
-                          <td style={{ padding: "0.75rem", color: "#666", fontSize: "0.85rem" }}>{s.unidad}</td>
-                        </tr>
-                      );
-                    })}</tbody>
-                  </table>
-                </div>
-              ))
+              stockFiltrado.map((item: any) => {
+                const stockTotal = item.lotes.reduce((s: number, l: any) => s + Number(l.stock_actual), 0);
+                const bajo = stockTotal <= 5;
+                return (
+                  <div key={item.nombre} style={{ marginBottom: "1.5rem", border: "1px solid #eee", borderRadius: "8px", overflow: "hidden" }}>
+                    {/* Cabecera del item */}
+                    <div style={{ background: "#f5f5f5", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <span style={{ fontWeight: "bold", fontSize: "1rem" }}>{item.nombre}</span>
+                        <span style={{ marginLeft: "1rem", fontSize: "0.8rem", color: "#1565c0" }}>{item.codigo || "—"}</span>
+                        <span style={{ marginLeft: "0.5rem", fontSize: "0.8rem", color: "#666" }}>| {item.categoria}</span>
+                      </div>
+                      <span style={{ background: bajo ? "#ffebee" : "#e8f5e9", color: bajo ? "#c62828" : "#2e7d32", padding: "0.3rem 0.8rem", borderRadius: "12px", fontWeight: "bold", fontSize: "0.95rem" }}>
+                        TOTAL: {stockTotal} {item.unidad}
+                      </span>
+                    </div>
+                    {/* Lotes del item */}
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead><tr style={{ background: "#fafafa" }}>
+                        <th style={{ padding: "0.5rem 1rem", textAlign: "left", fontSize: "0.78rem", color: "#888" }}>LOTE / GESTIÓN</th>
+                        <th style={{ padding: "0.5rem 1rem", textAlign: "left", fontSize: "0.78rem", color: "#888" }}>NUMERACIÓN TOTAL</th>
+                        <th style={{ padding: "0.5rem 1rem", textAlign: "left", fontSize: "0.78rem", color: "#888" }}>ACTUAL DESDE</th>
+                        <th style={{ padding: "0.5rem 1rem", textAlign: "center", fontSize: "0.78rem", color: "#888" }}>STOCK</th>
+                        <th style={{ padding: "0.5rem 1rem", textAlign: "left", fontSize: "0.78rem", color: "#888" }}>REGISTRADO</th>
+                      </tr></thead>
+                      <tbody>{item.lotes.map((lote: any, idx: number) => {
+                        const loteStock = Number(lote.stock_actual);
+                        const loteBajo = loteStock <= 5;
+                        return (
+                          <tr key={lote.lote_id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                            <td style={{ padding: "0.6rem 1rem", fontSize: "0.85rem", color: "#666" }}>
+                              Lote #{idx + 1}
+                            </td>
+                            <td style={{ padding: "0.6rem 1rem", fontSize: "0.85rem" }}>
+                              {lote.numeracion_inicio} — {lote.numeracion_fin}
+                            </td>
+                            <td style={{ padding: "0.6rem 1rem", fontSize: "0.85rem", color: "#1565c0", fontWeight: "bold" }}>
+                              {lote.numeracion_actual}
+                            </td>
+                            <td style={{ padding: "0.6rem 1rem", textAlign: "center" }}>
+                              <span style={{ background: loteBajo ? "#ffebee" : "#e8f5e9", color: loteBajo ? "#c62828" : "#2e7d32", padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: "bold", fontSize: "0.85rem" }}>
+                                {loteStock}
+                              </span>
+                            </td>
+                            <td style={{ padding: "0.6rem 1rem", fontSize: "0.78rem", color: "#aaa" }}>
+                              {lote.created_at?.split("T")[0]}
+                            </td>
+                          </tr>
+                        );
+                      })}</tbody>
+                    </table>
+                  </div>
+                );
+              })
             )}
           </>
         )}
@@ -180,40 +196,43 @@ export default function Inventario() {
           </>
         )}
 
-        {/* ===== REGISTRAR MOVIMIENTO ===== */}
-        {tab === "registrar" && (
+        {/* ===== NUEVO LOTE ===== */}
+        {tab === "nuevo_lote" && (
           <>
-            <h3 style={{ marginBottom: "0.5rem", color: "#333" }}>REGISTRAR INGRESO / AJUSTE</h3>
+            <h3 style={{ marginBottom: "0.5rem", color: "#333" }}>AGREGAR NUEVO LOTE</h3>
             <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: "1.5rem" }}>
-              Usa esto para registrar nuevos documentos recibidos o corregir el stock de valores fiscales.
+              Usa esto cuando lleguen nuevos talonarios o documentos para un item ya existente. Se crea un nuevo lote con su propia numeración y el sistema lo usará automáticamente en ventas cuando el lote anterior se agote.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", maxWidth: "600px" }}>
-              <div>
+              <div style={{ gridColumn: "span 2" }}>
                 <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM</label>
-                <select style={inputStyle} value={form.item_id || ""} onChange={e => setForm({ ...form, item_id: Number(e.target.value) })}>
+                <select style={inputStyle} value={formLote.item_id || ""} onChange={e => setFormLote({ ...formLote, item_id: Number(e.target.value) })}>
                   <option value="">Seleccionar item...</option>
-                  {items.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+                  {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>TIPO</label>
-                <select style={inputStyle} value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
-                  <option value="ingreso">📥 INGRESO (recibí más documentos)</option>
-                  <option value="ajuste">🔧 AJUSTE (corrección de stock)</option>
-                  <option value="egreso">📤 EGRESO (pérdida / baja)</option>
-                </select>
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN INICIO</label>
+                <input type="number" style={inputStyle} value={formLote.numeracion_inicio || ""} onChange={e => setFormLote({ ...formLote, numeracion_inicio: Number(e.target.value) })} placeholder="ej: 001" />
               </div>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>CANTIDAD</label>
-                <input type="number" style={inputStyle} value={form.cantidad || ""} onChange={e => setForm({ ...form, cantidad: Number(e.target.value) })} placeholder="0" />
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN FIN</label>
+                <input type="number" style={inputStyle} value={formLote.numeracion_fin || ""} onChange={e => setFormLote({ ...formLote, numeracion_fin: Number(e.target.value) })} placeholder="ej: 500" />
               </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO</label>
-                <input style={inputStyle} value={form.motivo || ""} onChange={e => setForm({ ...form, motivo: e.target.value })} placeholder="ej: Compra de talonarios" />
+              {formLote.numeracion_inicio && formLote.numeracion_fin && Number(formLote.numeracion_fin) > Number(formLote.numeracion_inicio) && (
+                <div style={{ gridColumn: "span 2" }}>
+                  <div style={{ background: "#e8f5e9", borderRadius: "6px", padding: "0.6rem 1rem", fontSize: "0.9rem", color: "#2e7d32" }}>
+                    📦 CANTIDAD: <b>{Number(formLote.numeracion_fin) - Number(formLote.numeracion_inicio) + 1}</b> documentos
+                  </div>
+                </div>
+              )}
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / OBSERVACIÓN</label>
+                <input style={inputStyle} value={formLote.motivo || ""} onChange={e => setFormLote({ ...formLote, motivo: e.target.value })} placeholder="ej: Compra de talonarios gestión 2025" />
               </div>
             </div>
-            <button onClick={registrarMovimiento} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#FF9800", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
-              REGISTRAR
+            <button onClick={agregarLote} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#4CAF50", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+              ✅ REGISTRAR NUEVO LOTE
             </button>
           </>
         )}
