@@ -15,6 +15,7 @@ export default function Inventario() {
   const hoy = new Date().toISOString().split("T")[0];
   const [msg, setMsg] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  const [busquedaMov, setBusquedaMov] = useState("");
   const user = getUser();
 
   useEffect(() => { requireAuth(); loadStock(); loadItems(); }, []);
@@ -172,72 +173,101 @@ export default function Inventario() {
         {/* ===== MOVIMIENTOS ===== */}
         {tab === "movimientos" && (
           <>
-            {/* Selector de fecha + resumen del día */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <span style={{ fontSize: "0.85rem", color: "#666" }}>FECHA:</span>
-                <input type="date" style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", border: "1px solid #ddd", fontSize: "0.9rem" }}
-                  value={desde} onChange={e => { setDesde(e.target.value); setHasta(e.target.value); }} />
-                {desde !== hoy && (
-                  <button onClick={() => { setDesde(hoy); setHasta(hoy); }}
-                    style={{ padding: "0.4rem 0.75rem", background: "#e3f2fd", color: "#1565c0", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem" }}>
-                    HOY
-                  </button>
-                )}
-                <button onClick={loadMovimientos}
-                  style={{ padding: "0.4rem 0.75rem", background: "#2196F3", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
-                  🔄 ACTUALIZAR
-                </button>
+            {/* Cabecera: fecha de hoy + busqueda + resumen */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
+              <div>
+                <span style={{ fontSize: "1rem", fontWeight: "bold", color: "#1a1a2e" }}>📅 {new Date().toLocaleDateString("es-BO", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).toUpperCase()}</span>
               </div>
-              {movimientos.length > 0 && (
-                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-                  {["venta", "ingreso", "egreso", "ajuste"].map(tipo => {
-                    const count = movimientos.filter(m => m.tipo === tipo).length;
-                    const total = movimientos.filter(m => m.tipo === tipo).reduce((s, m) => s + Number(m.cantidad), 0);
-                    if (!count) return null;
-                    const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
-                    return (
-                      <span key={tipo} style={{ background: colors[tipo][0], color: colors[tipo][1], padding: "0.3rem 0.75rem", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold" }}>
-                        {tipo.toUpperCase()}: {count} mov · {total} uds
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
+              <button onClick={loadMovimientos}
+                style={{ padding: "0.4rem 0.75rem", background: "#2196F3", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+                🔄 ACTUALIZAR
+              </button>
             </div>
 
-            {movimientos.length === 0 ? (
-              <p style={{ color: "#aaa", textAlign: "center", padding: "3rem", fontSize: "0.95rem" }}>Sin movimientos para esta fecha</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {movimientos.map(m => {
-                  const hora = m.fecha?.includes("T") ? m.fecha.split("T")[1]?.slice(0, 5) : "--:--";
-                  const colors: any = {
-                    venta:   { bg: "#fff3e0", color: "#e65100", border: "#FFB74D", icon: "🛒" },
-                    ingreso: { bg: "#e8f5e9", color: "#2e7d32", border: "#81C784", icon: "📥" },
-                    egreso:  { bg: "#ffebee", color: "#c62828", border: "#EF9A9A", icon: "📤" },
-                    ajuste:  { bg: "#f3e5f5", color: "#6a1b9a", border: "#CE93D8", icon: "🔧" },
-                  };
-                  const c = colors[m.tipo] || colors.ajuste;
+            {/* Resumen del dia */}
+            {movimientos.length > 0 && (
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                {["venta", "ingreso", "egreso", "ajuste"].map(tipo => {
+                  const items = movimientos.filter(m => m.tipo === tipo);
+                  if (!items.length) return null;
+                  const total = items.reduce((s, m) => s + Number(m.cantidad), 0);
+                  const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
                   return (
-                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1rem", background: c.bg, borderLeft: `4px solid ${c.border}`, borderRadius: "6px" }}>
-                      <span style={{ fontSize: "1.2rem" }}>{c.icon}</span>
-                      <span style={{ fontSize: "0.8rem", color: "#999", minWidth: "40px", fontFamily: "monospace" }}>{hora}</span>
-                      <span style={{ fontWeight: "bold", flex: 1, color: "#1a1a2e" }}>{m.item}</span>
-                      <span style={{ color: c.color, fontWeight: "bold", fontSize: "0.85rem", minWidth: "80px", textAlign: "center",
-                        background: "rgba(255,255,255,0.6)", padding: "0.2rem 0.5rem", borderRadius: "8px" }}>
-                        {m.tipo.toUpperCase()}
-                      </span>
-                      <span style={{ fontWeight: "bold", fontSize: "1rem", minWidth: "50px", textAlign: "right", color: c.color }}>
-                        {m.tipo === "venta" || m.tipo === "egreso" ? "-" : "+"}{m.cantidad}
-                      </span>
-                      <span style={{ fontSize: "0.8rem", color: "#888", flex: 1, textAlign: "right" }}>{m.motivo}</span>
-                      <span style={{ fontSize: "0.75rem", color: "#bbb", minWidth: "80px", textAlign: "right" }}>{m.usuario}</span>
-                    </div>
+                    <span key={tipo} style={{ background: colors[tipo][0], color: colors[tipo][1], padding: "0.4rem 1rem", borderRadius: "12px", fontSize: "0.82rem", fontWeight: "bold" }}>
+                      {tipo.toUpperCase()}: {items.length} mov · {total} uds
+                    </span>
                   );
                 })}
               </div>
             )}
+
+            {/* Busqueda */}
+            <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", alignItems: "center" }}>
+              <input
+                style={{ flex: 1, padding: "0.5rem 0.75rem", borderRadius: "6px", border: "1px solid #ddd", fontSize: "0.9rem" }}
+                placeholder="🔍 BUSCAR POR NOMBRE DE ITEM..."
+                value={busquedaMov}
+                onChange={e => setBusquedaMov(e.target.value)}
+              />
+              {busquedaMov && (
+                <button onClick={() => setBusquedaMov("")}
+                  style={{ padding: "0.5rem 0.75rem", background: "#999", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+                  LIMPIAR
+                </button>
+              )}
+            </div>
+
+            {/* Lista de movimientos */}
+            {(() => {
+              const filtrados = movimientos.filter(m =>
+                !busquedaMov || m.item.toUpperCase().includes(busquedaMov.toUpperCase())
+              );
+              if (filtrados.length === 0) return (
+                <p style={{ color: "#aaa", textAlign: "center", padding: "3rem", fontSize: "0.95rem" }}>
+                  {movimientos.length === 0 ? "Sin movimientos hoy" : "Sin resultados para \"" + busquedaMov + "\""}
+                </p>
+              );
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                  {filtrados.map(m => {
+                    const hora = m.fecha?.includes("T")
+                      ? m.fecha.split("T")[1]?.slice(0, 8)
+                      : m.fecha?.slice(11, 19) || "--:--:--";
+                    const colors: any = {
+                      venta:   { bg: "#fff3e0", color: "#e65100", border: "#FFB74D", icon: "🛒" },
+                      ingreso: { bg: "#e8f5e9", color: "#2e7d32", border: "#81C784", icon: "📥" },
+                      egreso:  { bg: "#ffebee", color: "#c62828", border: "#EF9A9A", icon: "📤" },
+                      ajuste:  { bg: "#f3e5f5", color: "#6a1b9a", border: "#CE93D8", icon: "🔧" },
+                    };
+                    const c = colors[m.tipo] || colors.ajuste;
+                    const signo = (m.tipo === "venta" || m.tipo === "egreso") ? "-" : "+";
+                    return (
+                      <div key={m.id} style={{ display: "grid", gridTemplateColumns: "70px 28px 1fr auto auto auto", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1rem", background: c.bg, borderLeft: `4px solid ${c.border}`, borderRadius: "6px" }}>
+                        {/* Hora */}
+                        <span style={{ fontFamily: "monospace", fontSize: "0.95rem", fontWeight: "bold", color: "#444", letterSpacing: "0.5px" }}>{hora}</span>
+                        {/* Icono */}
+                        <span style={{ fontSize: "1.1rem", textAlign: "center" }}>{c.icon}</span>
+                        {/* Nombre + motivo */}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: "bold", fontSize: "0.92rem", color: "#1a1a2e", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.item}</div>
+                          {m.motivo && <div style={{ fontSize: "0.75rem", color: "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.motivo}</div>}
+                        </div>
+                        {/* Tipo badge */}
+                        <span style={{ background: "rgba(255,255,255,0.7)", color: c.color, padding: "0.2rem 0.6rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "bold", whiteSpace: "nowrap" }}>
+                          {m.tipo.toUpperCase()}
+                        </span>
+                        {/* Cantidad */}
+                        <span style={{ fontWeight: "bold", fontSize: "1.1rem", color: c.color, minWidth: "45px", textAlign: "right" }}>
+                          {signo}{m.cantidad}
+                        </span>
+                        {/* Usuario */}
+                        <span style={{ fontSize: "0.72rem", color: "#bbb", minWidth: "60px", textAlign: "right" }}>{m.usuario}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </>
         )}
 
