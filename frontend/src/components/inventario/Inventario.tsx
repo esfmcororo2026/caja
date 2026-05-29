@@ -19,6 +19,7 @@ export default function Inventario() {
 
   useEffect(() => { requireAuth(); loadStock(); loadItems(); }, []);
   useEffect(() => { if (tab === "movimientos") loadMovimientos(); }, [tab]);
+  useEffect(() => { if (tab === "nuevo_lote") loadStock(); }, [tab]);
 
   async function loadStock() {
     const r = await api.get("/inventario/stock");
@@ -38,9 +39,15 @@ export default function Inventario() {
   async function onSelectItem(item_id: number) {
     setFormLote({ ...formLote, item_id });
     if (!item_id) { setLotesDelItem([]); return; }
-    const r = await api.get("/inventario/stock");
-    const lotes = (r || []).filter((l: any) => l.item_id === item_id);
-    setLotesDelItem(lotes);
+    const lotes = stock.filter((l: any) => Number(l.item_id) === Number(item_id));
+    if (lotes.length > 0) {
+      setLotesDelItem(lotes);
+    } else {
+      // Si stock no está cargado aún, hacer la llamada
+      const r = await api.get("/inventario/stock");
+      setStock(r || []);
+      setLotesDelItem((r || []).filter((l: any) => Number(l.item_id) === Number(item_id)));
+    }
   }
 
   async function agregarLote() {
