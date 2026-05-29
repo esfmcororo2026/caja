@@ -188,14 +188,18 @@ export default function Inventario() {
             {movimientos.length > 0 && (
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
                 {["venta", "ingreso", "egreso", "ajuste"].map(tipo => {
-                  const items = movimientos.filter(m => m.tipo === tipo);
-                  if (!items.length) return null;
-                  const total = items.reduce((s, m) => s + Number(m.cantidad), 0);
+                  const movsTipo = movimientos.filter(m => m.tipo === tipo);
+                  if (!movsTipo.length) return null;
+                  const totalUds = movsTipo.reduce((s, m) => s + Number(m.cantidad), 0);
                   const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
+                  const labels: any = { venta: "VENTAS", ingreso: "INGRESOS", egreso: "EGRESOS", ajuste: "AJUSTES" };
+                  const icons: any = { venta: "🛒", ingreso: "📥", egreso: "📤", ajuste: "🔧" };
                   return (
-                    <span key={tipo} style={{ background: colors[tipo][0], color: colors[tipo][1], padding: "0.4rem 1rem", borderRadius: "12px", fontSize: "0.82rem", fontWeight: "bold" }}>
-                      {tipo.toUpperCase()}: {items.length} mov · {total} uds
-                    </span>
+                    <div key={tipo} style={{ background: colors[tipo][0], color: colors[tipo][1], padding: "0.5rem 1rem", borderRadius: "10px", fontSize: "0.82rem", fontWeight: "bold", lineHeight: "1.5" }}>
+                      <div>{icons[tipo]} {labels[tipo]}</div>
+                      <div style={{ fontSize: "1rem" }}>{movsTipo.length} {movsTipo.length === 1 ? "registro" : "registros"}</div>
+                      <div style={{ fontSize: "0.78rem", opacity: 0.8 }}>{totalUds} {totalUds === 1 ? "unidad" : "unidades"} en total</div>
+                    </div>
                   );
                 })}
               </div>
