@@ -13,8 +13,33 @@ route.get("/ventas", async (c) => {
 
 route.get("/ventas/detalle", async (c) => {
   const { desde, hasta } = c.req.query();
-  const r = await query(c.env, `SELECT dv.*, i.nombre as item, v.fecha, cl.nombre as cliente FROM detalle_ventas dv JOIN ventas v ON dv.venta_id = v.id JOIN items i ON dv.item_id = i.id LEFT JOIN clientes cl ON v.cliente_id = cl.id WHERE v.fecha BETWEEN ? AND ? ORDER BY v.fecha DESC`, [desde || "2000-01-01", hasta || "2099-12-31"]);
-  return c.json(r.rows);
+  const ventas = await query(c.env,
+    `SELECT v.id, v.fecha, v.total, cl.nombre as cliente, u.nombre as cajero
+     FROM ventas v
+     LEFT JOIN clientes cl ON v.cliente_id = cl.id
+     JOIN usuarios u ON v.usuario_id = u.id
+     WHERE v.fecha BETWEEN ? AND ?
+     ORDER BY v.fecha DESC`,
+    [desde || "2000-01-01", hasta || "2099-12-31"]
+  );
+  const detalle = await query(c.env,
+    `SELECT dv.venta_id, dv.cantidad, dv.precio_unitario, dv.subtotal,
+            dv.numeracion_desde, dv.numeracion_hasta,
+            i.nombre as item, un.abreviatura as unidad
+     FROM detalle_ventas dv
+     JOIN ventas v ON dv.venta_id = v.id
+     JOIN items i ON dv.item_id = i.id
+     JOIN unidades un ON dv.unidad_id = un.id
+     WHERE v.fecha BETWEEN ? AND ?`,
+    [desde || "2000-01-01", hasta || "2099-12-31"]
+  );
+  const detalleMap: Record<number, any[]> = {};
+  for (const d of detalle.rows) {
+    if (!detalleMap[d.venta_id]) detalleMap[d.venta_id] = [];
+    detalleMap[d.venta_id].push(d);
+  }
+  const result = ventas.rows.map(v => ({ ...v, items: detalleMap[v.id] || [] }));
+  return c.json(result);
 });
 
 route.post("/caja/abrir", async (c) => {
@@ -34,12 +59,27 @@ route.post("/caja/cerrar", async (c) => {
   return c.json({ ok: true });
 });
 
+route.get("/caja/sesion-activa/:usuario_id", async (c) => {
+  const usuario_id = c.req.param("usuario_id");
+  const r = await query(c.env, "SELECT * FROM caja_sesiones WHERE usuario_id = ? AND estado = 'abierta' ORDER BY fecha_apertura DESC LIMIT 1", [usuario_id]);
+  if (!r.rows.length) return c.json({ sesion: null });
+  return c.json({ sesion: r.rows[0] });
+});
+
 route.get("/caja/:id", async (c) => {
   const id = c.req.param("id");
   const sesion = await query(c.env, "SELECT * FROM caja_sesiones WHERE id = ?", [id]);
+  if (!sesion.rows.length) return c.json({ error: "Sesión no encontrada" }, 404);
+  const s = sesion.rows[0];
+  const fechaCierre = s.fecha_cierre || "2099-12-31 23:59:59";
   const denominaciones = await query(c.env, "SELECT * FROM arqueo_denominaciones WHERE caja_sesion_id = ?", [id]);
-  const ventas = await query(c.env, `SELECT SUM(total) as total_ventas FROM ventas WHERE usuario_id = (SELECT usuario_id FROM caja_sesiones WHERE id = ?) AND fecha >= (SELECT fecha_apertura FROM caja_sesiones WHERE id = ?)`, [id, id]);
-  return c.json({ sesion: sesion.rows[0], denominaciones: denominaciones.rows, ventas: ventas.rows[0] });
+  const ventas = await query(c.env,
+    `SELECT COUNT(*) as total_transacciones, COALESCE(SUM(total), 0) as total_ventas
+     FROM ventas
+     WHERE usuario_id = ? AND fecha >= ? AND fecha <= ?`,
+    [s.usuario_id, s.fecha_apertura, fechaCierre]
+  );
+  return c.json({ sesion: s, denominaciones: denominaciones.rows, ventas: ventas.rows[0] });
 });
 
 export default route;
