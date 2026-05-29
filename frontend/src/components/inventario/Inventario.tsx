@@ -11,11 +11,13 @@ export default function Inventario() {
   const [formLote, setFormLote] = useState<any>({});
   const [desde, setDesde] = useState(new Date().toISOString().split("T")[0]);
   const [hasta, setHasta] = useState(new Date().toISOString().split("T")[0]);
+  const hoy = new Date().toISOString().split("T")[0];
   const [msg, setMsg] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const user = getUser();
 
   useEffect(() => { requireAuth(); loadStock(); loadItems(); }, []);
+  useEffect(() => { if (tab === "movimientos") loadMovimientos(); }, [tab]);
 
   async function loadStock() {
     const r = await api.get("/inventario/stock");
@@ -154,44 +156,71 @@ export default function Inventario() {
         {/* ===== MOVIMIENTOS ===== */}
         {tab === "movimientos" && (
           <>
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>DESDE</label>
-                <input type="date" style={inputStyle} value={desde} onChange={e => setDesde(e.target.value)} />
+            {/* Selector de fecha + resumen del día */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span style={{ fontSize: "0.85rem", color: "#666" }}>FECHA:</span>
+                <input type="date" style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", border: "1px solid #ddd", fontSize: "0.9rem" }}
+                  value={desde} onChange={e => { setDesde(e.target.value); setHasta(e.target.value); }} />
+                {desde !== hoy && (
+                  <button onClick={() => { setDesde(hoy); setHasta(hoy); }}
+                    style={{ padding: "0.4rem 0.75rem", background: "#e3f2fd", color: "#1565c0", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem" }}>
+                    HOY
+                  </button>
+                )}
+                <button onClick={loadMovimientos}
+                  style={{ padding: "0.4rem 0.75rem", background: "#2196F3", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+                  🔄 ACTUALIZAR
+                </button>
               </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>HASTA</label>
-                <input type="date" style={inputStyle} value={hasta} onChange={e => setHasta(e.target.value)} />
-              </div>
-              <button onClick={loadMovimientos} style={{ padding: "0.6rem 1.5rem", background: "#2196F3", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>BUSCAR</button>
+              {movimientos.length > 0 && (
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                  {["venta", "ingreso", "egreso", "ajuste"].map(tipo => {
+                    const count = movimientos.filter(m => m.tipo === tipo).length;
+                    const total = movimientos.filter(m => m.tipo === tipo).reduce((s, m) => s + Number(m.cantidad), 0);
+                    if (!count) return null;
+                    const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
+                    return (
+                      <span key={tipo} style={{ background: colors[tipo][0], color: colors[tipo][1], padding: "0.3rem 0.75rem", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold" }}>
+                        {tipo.toUpperCase()}: {count} mov · {total} uds
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
             {movimientos.length === 0 ? (
-              <p style={{ color: "#aaa", textAlign: "center", padding: "2rem" }}>No hay movimientos en este período</p>
+              <p style={{ color: "#aaa", textAlign: "center", padding: "3rem", fontSize: "0.95rem" }}>Sin movimientos para esta fecha</p>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr style={{ background: "#f5f5f5" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>FECHA</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>ITEM</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>TIPO</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>CANTIDAD</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>MOTIVO</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>USUARIO</th>
-                </tr></thead>
-                <tbody>{movimientos.map(m => (
-                  <tr key={m.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    <td style={{ padding: "0.75rem", fontSize: "0.85rem", color: "#666" }}>{m.fecha?.split("T")[0]}</td>
-                    <td style={{ padding: "0.75rem", fontWeight: "bold" }}>{m.item}</td>
-                    <td style={{ padding: "0.75rem" }}>
-                      <span style={{ background: m.tipo === "ingreso" ? "#e8f5e9" : m.tipo === "venta" ? "#fff3e0" : "#ffebee", color: m.tipo === "ingreso" ? "#2e7d32" : m.tipo === "venta" ? "#e65100" : "#c62828", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {movimientos.map(m => {
+                  const hora = m.fecha?.includes("T") ? m.fecha.split("T")[1]?.slice(0, 5) : "--:--";
+                  const colors: any = {
+                    venta:   { bg: "#fff3e0", color: "#e65100", border: "#FFB74D", icon: "🛒" },
+                    ingreso: { bg: "#e8f5e9", color: "#2e7d32", border: "#81C784", icon: "📥" },
+                    egreso:  { bg: "#ffebee", color: "#c62828", border: "#EF9A9A", icon: "📤" },
+                    ajuste:  { bg: "#f3e5f5", color: "#6a1b9a", border: "#CE93D8", icon: "🔧" },
+                  };
+                  const c = colors[m.tipo] || colors.ajuste;
+                  return (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1rem", background: c.bg, borderLeft: `4px solid ${c.border}`, borderRadius: "6px" }}>
+                      <span style={{ fontSize: "1.2rem" }}>{c.icon}</span>
+                      <span style={{ fontSize: "0.8rem", color: "#999", minWidth: "40px", fontFamily: "monospace" }}>{hora}</span>
+                      <span style={{ fontWeight: "bold", flex: 1, color: "#1a1a2e" }}>{m.item}</span>
+                      <span style={{ color: c.color, fontWeight: "bold", fontSize: "0.85rem", minWidth: "80px", textAlign: "center",
+                        background: "rgba(255,255,255,0.6)", padding: "0.2rem 0.5rem", borderRadius: "8px" }}>
                         {m.tipo.toUpperCase()}
                       </span>
-                    </td>
-                    <td style={{ padding: "0.75rem", fontWeight: "bold" }}>{m.cantidad}</td>
-                    <td style={{ padding: "0.75rem", color: "#666", fontSize: "0.85rem" }}>{m.motivo}</td>
-                    <td style={{ padding: "0.75rem", color: "#666", fontSize: "0.85rem" }}>{m.usuario}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
+                      <span style={{ fontWeight: "bold", fontSize: "1rem", minWidth: "50px", textAlign: "right", color: c.color }}>
+                        {m.tipo === "venta" || m.tipo === "egreso" ? "-" : "+"}{m.cantidad}
+                      </span>
+                      <span style={{ fontSize: "0.8rem", color: "#888", flex: 1, textAlign: "right" }}>{m.motivo}</span>
+                      <span style={{ fontSize: "0.75rem", color: "#bbb", minWidth: "80px", textAlign: "right" }}>{m.usuario}</span>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </>
         )}
