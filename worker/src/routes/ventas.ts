@@ -12,29 +12,38 @@ route.get("/", async (c) => {
 });
 
 route.post("/", async (c) => {
-  const { cliente_id, usuario_id, total, detalle } = await c.req.json();
-  const venta = await query(c.env, "INSERT INTO ventas (cliente_id, usuario_id, total) VALUES (?, ?, ?)", [cliente_id || null, usuario_id, total]);
-  const venta_id = venta.lastInsertRowid;
-  for (const d of detalle) {
-    // Obtener item para ver si tiene numeración
-    const itemR = await query(c.env, "SELECT numeracion_actual, tiene_stock, tiene_numeracion FROM items i LEFT JOIN codigos cd ON i.codigo_id = cd.id WHERE i.id = ?", [d.item_id]);
-    const item = itemR.rows[0];
-    let num_desde = null;
-    let num_hasta = null;
-    if (item?.tiene_numeracion) {
-      num_desde = item.numeracion_actual;
-      num_hasta = Number(item.numeracion_actual) + Number(d.cantidad) - 1;
-      await query(c.env, "UPDATE items SET numeracion_actual = ?, stock_actual = stock_actual - ? WHERE id = ?", [num_hasta + 1, d.cantidad, d.item_id]);
-    } else if (item?.tiene_stock) {
-      await query(c.env, "UPDATE items SET stock_actual = stock_actual - ? WHERE id = ? AND tiene_stock = 1", [d.cantidad, d.item_id]);
+  try {
+    const { persona_id, cliente_id, usuario_id, total, detalle } = await c.req.json();
+    const finalClienteId = persona_id || cliente_id || null;
+    if (!finalClienteId) return c.json({ error: "Debe seleccionar una persona" }, 400);
+    if (!usuario_id) return c.json({ error: "usuario_id requerido" }, 400);
+    if (!detalle?.length) return c.json({ error: "El carrito está vacío" }, 400);
+
+    const venta = await query(c.env, "INSERT INTO ventas (cliente_id, usuario_id, total) VALUES (?, ?, ?)", [finalClienteId, usuario_id, total]);
+    const venta_id = venta.lastInsertRowid;
+    for (const d of detalle) {
+      const itemR = await query(c.env, "SELECT i.numeracion_actual, i.tiene_stock, cd.tiene_numeracion FROM items i LEFT JOIN codigos cd ON i.codigo_id = cd.id WHERE i.id = ?", [d.item_id]);
+      const item = itemR.rows[0];
+      let num_desde = null;
+      let num_hasta = null;
+      if (item?.tiene_numeracion) {
+        num_desde = item.numeracion_actual;
+        num_hasta = Number(item.numeracion_actual) + Number(d.cantidad) - 1;
+        await query(c.env, "UPDATE items SET numeracion_actual = ?, stock_actual = stock_actual - ? WHERE id = ?", [num_hasta + 1, d.cantidad, d.item_id]);
+      } else if (item?.tiene_stock) {
+        await query(c.env, "UPDATE items SET stock_actual = stock_actual - ? WHERE id = ?", [d.cantidad, d.item_id]);
+      }
+      await query(c.env,
+        "INSERT INTO detalle_ventas (venta_id, item_id, cantidad, precio_unitario, subtotal, unidad_id, numeracion_desde, numeracion_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [venta_id, d.item_id, d.cantidad, d.precio_unitario, d.subtotal, d.unidad_id, num_desde, num_hasta]
+      );
+      await query(c.env, "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'venta', ?, ?, ?)", [d.item_id, d.cantidad, `Venta #${venta_id}`, usuario_id]);
     }
-    await query(c.env,
-      "INSERT INTO detalle_ventas (venta_id, item_id, cantidad, precio_unitario, subtotal, unidad_id, numeracion_desde, numeracion_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [venta_id, d.item_id, d.cantidad, d.precio_unitario, d.subtotal, d.unidad_id, num_desde, num_hasta]
-    );
-    await query(c.env, "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'venta', ?, ?, ?)", [d.item_id, d.cantidad, `Venta #${venta_id}`, usuario_id]);
+    return c.json({ id: venta_id });
+  } catch (e: any) {
+    console.error("Error en venta:", e.message);
+    return c.json({ error: e.message }, 500);
   }
-  return c.json({ id: venta_id });
 });
 
 route.get("/clientes", async (c) => {
