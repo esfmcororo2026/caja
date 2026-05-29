@@ -77,6 +77,9 @@ export default function Catalogo() {
 
   // --- ITEMS ---
   const codigoSeleccionado = codigos.find(c => c.id === Number(form.codigo_id));
+  const itemDuplicado = !editId && form.nombre
+    ? items.find(i => i.nombre.toUpperCase() === form.nombre.toUpperCase())
+    : null;
 
   async function saveItem() {
     const tieneNumeracion = !!(form.numeracion_inicio && form.numeracion_fin);
@@ -336,6 +339,11 @@ export default function Catalogo() {
                 <button style={btnStyle("#4CAF50")} onClick={saveItem}>GUARDAR ITEM</button>
                 {editId && <button style={btnStyle("#999")} onClick={resetForm}>CANCELAR</button>}
               </div>
+              {itemDuplicado && (
+                <div style={{ marginTop: "0.75rem", background: "#fff3e0", border: "1px solid #FF9800", borderRadius: "6px", padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#e65100" }}>
+                  ⚠️ Ya existe un item con el nombre <b>{itemDuplicado.nombre}</b>. Si quieres agregar más stock, ve a <b>Inventario → Nuevo Lote</b> en vez de crear uno nuevo.
+                </div>
+              )}
             </div>
 
             <FiltrosItems items={items} categorias={categorias} codigos={codigos} onFiltrar={setItemsFiltrados} />
