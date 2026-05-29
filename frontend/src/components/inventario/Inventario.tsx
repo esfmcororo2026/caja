@@ -81,24 +81,15 @@ export default function Inventario() {
         {tab === "stock" && (
           <>
             {/* Filtros */}
-            <div style={{ background: "#f0f0f0", borderRadius: "8px", padding: "1rem", marginBottom: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "0.75rem" }}>
-              <div>
+            <div style={{ background: "#f0f0f0", borderRadius: "8px", padding: "1rem", marginBottom: "1.5rem", display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
+              <div style={{ flex: 1 }}>
                 <label style={{ fontSize: "0.8rem", color: "#666" }}>🔍 BUSCAR POR NOMBRE</label>
                 <input style={inputStyle} value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="BUSCAR..." />
               </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>🗂 FILTRAR CATEGORÍA</label>
-                <select style={inputStyle} value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}>
-                  <option value="">TODAS</option>
-                  {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div style={{ display: "flex", alignItems: "flex-end" }}>
-                <button onClick={() => { setBusqueda(""); setFiltroCategoria(""); }}
-                  style={{ padding: "0.6rem 1rem", background: "#999", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
-                  LIMPIAR
-                </button>
-              </div>
+              <button onClick={() => setBusqueda("")}
+                style={{ padding: "0.6rem 1rem", background: "#999", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+                LIMPIAR
+              </button>
             </div>
 
             {/* Tabla agrupada por categoría */}
