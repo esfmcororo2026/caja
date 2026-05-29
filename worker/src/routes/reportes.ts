@@ -7,7 +7,7 @@ route.use("*", authMiddleware);
 
 route.get("/ventas", async (c) => {
   const { desde, hasta } = c.req.query();
-  const r = await query(c.env, `SELECT DATE(v.fecha) as dia, COUNT(*) as total_ventas, SUM(v.total) as monto_total FROM ventas v WHERE v.fecha BETWEEN ? AND ? GROUP BY DATE(v.fecha) ORDER BY dia DESC`, [desde || "2000-01-01", hasta || "2099-12-31"]);
+  const r = await query(c.env, `SELECT DATE(v.fecha) as dia, COUNT(*) as total_ventas, SUM(v.total) as monto_total FROM ventas v WHERE DATE(v.fecha) BETWEEN ? AND ? GROUP BY DATE(v.fecha) ORDER BY dia DESC`, [desde || "2000-01-01", hasta || "2099-12-31"]);
   return c.json(r.rows);
 });
 
@@ -18,7 +18,7 @@ route.get("/ventas/detalle", async (c) => {
      FROM ventas v
      LEFT JOIN clientes cl ON v.cliente_id = cl.id
      JOIN usuarios u ON v.usuario_id = u.id
-     WHERE v.fecha BETWEEN ? AND ?
+     WHERE DATE(v.fecha) BETWEEN ? AND ?
      ORDER BY v.fecha DESC`,
     [desde || "2000-01-01", hasta || "2099-12-31"]
   );
@@ -30,7 +30,7 @@ route.get("/ventas/detalle", async (c) => {
      JOIN ventas v ON dv.venta_id = v.id
      JOIN items i ON dv.item_id = i.id
      JOIN unidades un ON dv.unidad_id = un.id
-     WHERE v.fecha BETWEEN ? AND ?`,
+     WHERE DATE(v.fecha) BETWEEN ? AND ?`,
     [desde || "2000-01-01", hasta || "2099-12-31"]
   );
   const detalleMap: Record<number, any[]> = {};

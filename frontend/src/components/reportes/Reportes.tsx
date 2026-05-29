@@ -117,12 +117,6 @@ export default function Reportes() {
                 </table></body></html>`);
                 w.document.close(); w.print();
               }} style={{ padding: "0.6rem 1.5rem", background: "#FF9800", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>🖨 PDF</button>}
-              {ventas.length > 0 && (
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button onClick={() => setVistaReporte("resumen")} style={{ padding: "0.4rem 1rem", borderRadius: "6px", border: "none", cursor: "pointer", background: vistaReporte === "resumen" ? "#1a1a2e" : "#eee", color: vistaReporte === "resumen" ? "#fff" : "#333", fontSize: "0.85rem" }}>Por día</button>
-                  <button onClick={() => setVistaReporte("detalle")} style={{ padding: "0.4rem 1rem", borderRadius: "6px", border: "none", cursor: "pointer", background: vistaReporte === "detalle" ? "#1a1a2e" : "#eee", color: vistaReporte === "detalle" ? "#fff" : "#333", fontSize: "0.85rem" }}>Por venta</button>
-                </div>
-              )}
             </div>
             {ventas.length > 0 && (
               <>
@@ -145,6 +139,7 @@ export default function Reportes() {
                   <button onClick={() => setVistaReporte("resumen")} style={{ padding: "0.4rem 1rem", borderRadius: "6px", border: "none", cursor: "pointer", background: vistaReporte === "resumen" ? "#9C27B0" : "#eee", color: vistaReporte === "resumen" ? "#fff" : "#333", fontSize: "0.85rem" }}>Por día</button>
                   <button onClick={() => setVistaReporte("detalle")} style={{ padding: "0.4rem 1rem", borderRadius: "6px", border: "none", cursor: "pointer", background: vistaReporte === "detalle" ? "#9C27B0" : "#eee", color: vistaReporte === "detalle" ? "#fff" : "#333", fontSize: "0.85rem" }}>Por venta</button>
                 </div>
+
 
                 {vistaReporte === "resumen" && (
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
