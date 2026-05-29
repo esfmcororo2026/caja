@@ -6,7 +6,16 @@ const route = new Hono<{ Bindings: Env }>();
 route.use("*", authMiddleware);
 
 route.get("/stock", async (c) => {
-  const r = await query(c.env, `SELECT i.id, i.nombre, i.stock_actual, u.nombre as unidad, c.nombre as categoria FROM items i JOIN unidades u ON i.unidad_id = u.id JOIN categorias c ON i.categoria_id = c.id WHERE i.tiene_stock = 1 AND i.activo = 1`);
+  const r = await query(c.env, `
+    SELECT i.id, i.nombre, i.stock_actual, i.numeracion_inicio, i.numeracion_fin, i.numeracion_actual,
+           u.nombre as unidad, cat.nombre as categoria, cd.nombre as codigo
+    FROM items i
+    JOIN unidades u ON i.unidad_id = u.id
+    JOIN categorias cat ON i.categoria_id = cat.id
+    LEFT JOIN codigos cd ON i.codigo_id = cd.id
+    WHERE i.activo = 1 AND i.numeracion_inicio > 0 AND i.numeracion_fin > 0
+    ORDER BY cat.nombre, i.nombre
+  `);
   return c.json(r.rows);
 });
 
