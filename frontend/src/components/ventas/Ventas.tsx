@@ -82,32 +82,33 @@ export default function Ventas() {
     });
     
     if (res?.id) {
-      setVentaOk({ 
+      const venta = { 
         id: res.id, 
         carrito, 
         total, 
         persona: personaSeleccionada.nombre, 
         fecha: new Date().toLocaleString() 
-      });
+      };
+      setVentaOk(venta);
       setCarrito([]);
       setPersonaSeleccionada(null);
+      imprimirReciboData(venta);
     }
   }
 
-  function imprimirRecibo() {
-    if (!ventaOk) return;
+  function imprimirReciboData(v: any) {
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(`
-      <html><head><title>Recibo #${ventaOk.id}</title>
+      <html><head><title>Recibo #${v.id}</title>
       <style>body{font-family:monospace;max-width:300px;margin:0 auto;padding:1rem}h2,p{text-align:center}table{width:100%}td{padding:0.2rem 0}hr{border-top:1px dashed #000}.total{font-weight:bold;font-size:1.1rem}</style>
       </head><body>
       <h2>CAJA ESFM</h2><p>Sistema de Ventas</p><hr/>
-      <p><b>Recibo #${ventaOk.id}</b></p>
-      <p>Persona: ${ventaOk.persona}</p>
-      <p>Fecha: ${ventaOk.fecha}</p><hr/>
-      <table>${ventaOk.carrito.map((i: any) => `<tr><td><b>${i.nombre}</b></td><td>${i.cantidad} ${i.unidad}</td><td>Bs. ${i.subtotal.toFixed(2)}</td></tr>${i.num_desde ? `<tr><td colspan="3" style="font-size:0.85em;color:#555">&nbsp;&nbsp;Nums: ${i.num_desde} al ${i.num_hasta}</td></tr>` : ""}`).join("")}</table>
-      <hr/><p class="total">TOTAL: Bs. ${ventaOk.total.toFixed(2)}</p>
+      <p><b>Recibo #${v.id}</b></p>
+      <p>Persona: ${v.persona}</p>
+      <p>Fecha: ${v.fecha}</p><hr/>
+      <table>${v.carrito.map((i: any) => `<tr><td><b>${i.nombre}</b></td><td>${i.cantidad} ${i.unidad}</td><td>Bs. ${i.subtotal.toFixed(2)}</td></tr>${i.num_desde ? `<tr><td colspan="3" style="font-size:0.85em;color:#555">&nbsp;&nbsp;Nums: ${i.num_desde} al ${i.num_hasta}</td></tr>` : ""}`).join("")}</table>
+      <hr/><p class="total">TOTAL: Bs. ${v.total.toFixed(2)}</p>
       <hr/><p>¡Gracias!</p></body></html>
     `);
     w.document.close(); w.print();
@@ -127,10 +128,7 @@ export default function Ventas() {
       {ventaOk && (
         <div style={{ background: "#4CAF50", color: "#fff", padding: "1rem", borderRadius: "8px", marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>✅ Venta #{ventaOk.id} registrada — Total: Bs. {ventaOk.total.toFixed(2)}</span>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button style={btnStyle("#fff")} onClick={imprimirRecibo}><span style={{ color: "#4CAF50" }}>🖨 Imprimir recibo</span></button>
-            <button style={btnStyle("#388E3C")} onClick={() => setVentaOk(null)}>Nueva venta</button>
-          </div>
+          <button style={btnStyle("#fff")} onClick={() => imprimirReciboData(ventaOk)}><span style={{ color: "#4CAF50" }}>🖨 Reimprimir recibo</span></button>
         </div>
       )}
 
