@@ -114,6 +114,8 @@ export default function Ventas() {
   }
 
   // Colores para categorías
+  const btnStyle = (bg: string) => ({ padding: "0.5rem 1rem", background: bg, color: bg === "#fff" ? "#333" : "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" });
+
   const colorMap: { [key: number]: string } = {};
   categorias.forEach((cat, idx) => {
     const colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E2"];
