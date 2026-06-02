@@ -388,7 +388,12 @@ export default function Inventario() {
                     <div style={{ gridColumn: "span 2" }}>
                       <label style={{ fontSize: "0.8rem", color: "#666" }}>SELECCIONAR LOTE A RETIRAR</label>
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
-                        {lotesDelItem.map((l: any, idx: number) => (
+                        {lotesDelItem.filter((l: any) => Number(l.stock_actual) > 0).length === 0 ? (
+                          <div style={{ background: "#ffebee", border: "1px solid #EF9A9A", borderRadius: "8px", padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#c62828" }}>
+                            ⚠️ Este item no tiene lotes con stock disponible para retirar.
+                          </div>
+                        ) : (
+                          lotesDelItem.filter((l: any) => Number(l.stock_actual) > 0).map((l: any, idx: number) => (
                           <label key={l.lote_id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", border: `2px solid ${formRetiro.lote_id === l.lote_id ? "#f44336" : "#ddd"}`, borderRadius: "8px", cursor: "pointer", background: formRetiro.lote_id === l.lote_id ? "#ffebee" : "#fafafa" }}>
                             <input type="radio" name="lote" checked={formRetiro.lote_id === l.lote_id}
                               onChange={() => setFormRetiro({ ...formRetiro, lote_id: l.lote_id, item_id: l.item_id, stock_actual: l.stock_actual })} />
@@ -401,7 +406,8 @@ export default function Inventario() {
                               {l.stock_actual} docs
                             </span>
                           </label>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </div>
                   )}

@@ -19,7 +19,7 @@ route.get("/stock", async (c) => {
     JOIN unidades u ON i.unidad_id = u.id
     JOIN categorias cat ON i.categoria_id = cat.id
     LEFT JOIN codigos cd ON i.codigo_id = cd.id
-    WHERE l.activo = 1 AND i.activo = 1
+    WHERE l.activo = 1 AND l.stock_actual > 0 AND i.activo = 1
     ORDER BY i.nombre, l.created_at ASC
   `);
   return c.json(r.rows);
