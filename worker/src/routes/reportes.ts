@@ -82,4 +82,101 @@ route.get("/caja/:id", async (c) => {
   return c.json({ sesion: s, denominaciones: denominaciones.rows, ventas: ventas.rows[0] });
 });
 
+route.post("/personalizado", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { desde, hasta, tipo_cliente, cliente_id, categoria_id, item_id, codigo_id, cajero_id, solo_numeracion, agrupacion } = body;
+
+    const args: any[] = [];
+    const wheres: string[] = ["1=1"];
+
+    wheres.push("DATE(v.fecha) BETWEEN ? AND ?");
+    args.push(desde || "2000-01-01", hasta || "2099-12-31");
+
+    if (tipo_cliente) { wheres.push("cl.tipo = ?"); args.push(tipo_cliente); }
+    if (cliente_id)   { wheres.push("v.cliente_id = ?"); args.push(cliente_id); }
+    if (categoria_id) { wheres.push("i.categoria_id = ?"); args.push(categoria_id); }
+    if (item_id)      { wheres.push("dv.item_id = ?"); args.push(item_id); }
+    if (codigo_id)    { wheres.push("i.codigo_id = ?"); args.push(codigo_id); }
+    if (cajero_id)    { wheres.push("v.usuario_id = ?"); args.push(cajero_id); }
+    if (solo_numeracion) { wheres.push("dv.numeracion_desde IS NOT NULL"); }
+
+    const where = wheres.join(" AND ");
+
+    let sql = "";
+    if (agrupacion === "dia") {
+      sql = `SELECT DATE(v.fecha) as grupo, COUNT(DISTINCT v.id) as total_ventas, SUM(dv.subtotal) as monto_total
+             FROM ventas v
+             JOIN detalle_ventas dv ON dv.venta_id = v.id
+             JOIN items i ON dv.item_id = i.id
+             LEFT JOIN clientes cl ON v.cliente_id = cl.id
+             WHERE ${where} GROUP BY DATE(v.fecha) ORDER BY grupo DESC`;
+    } else if (agrupacion === "tipo_cliente") {
+      sql = `SELECT COALESCE(cl.tipo, 'SIN TIPO') as grupo, COUNT(DISTINCT v.id) as total_ventas, SUM(dv.subtotal) as monto_total
+             FROM ventas v
+             JOIN detalle_ventas dv ON dv.venta_id = v.id
+             JOIN items i ON dv.item_id = i.id
+             LEFT JOIN clientes cl ON v.cliente_id = cl.id
+             WHERE ${where} GROUP BY cl.tipo ORDER BY monto_total DESC`;
+    } else if (agrupacion === "categoria") {
+      sql = `SELECT cat.nombre as grupo, COUNT(DISTINCT v.id) as total_ventas, SUM(dv.subtotal) as monto_total
+             FROM ventas v
+             JOIN detalle_ventas dv ON dv.venta_id = v.id
+             JOIN items i ON dv.item_id = i.id
+             JOIN categorias cat ON i.categoria_id = cat.id
+             LEFT JOIN clientes cl ON v.cliente_id = cl.id
+             WHERE ${where} GROUP BY cat.nombre ORDER BY monto_total DESC`;
+    } else if (agrupacion === "item") {
+      sql = `SELECT i.nombre as grupo, SUM(dv.cantidad) as total_cantidad, SUM(dv.subtotal) as monto_total, COUNT(DISTINCT v.id) as total_ventas
+             FROM ventas v
+             JOIN detalle_ventas dv ON dv.venta_id = v.id
+             JOIN items i ON dv.item_id = i.id
+             LEFT JOIN clientes cl ON v.cliente_id = cl.id
+             WHERE ${where} GROUP BY i.nombre ORDER BY monto_total DESC`;
+    } else if (agrupacion === "cajero") {
+      sql = `SELECT u.nombre as grupo, COUNT(DISTINCT v.id) as total_ventas, SUM(dv.subtotal) as monto_total
+             FROM ventas v
+             JOIN detalle_ventas dv ON dv.venta_id = v.id
+             JOIN items i ON dv.item_id = i.id
+             JOIN usuarios u ON v.usuario_id = u.id
+             LEFT JOIN clientes cl ON v.cliente_id = cl.id
+             WHERE ${where} GROUP BY u.nombre ORDER BY monto_total DESC`;
+    } else {
+      // Sin agrupacion: detalle por fila
+      sql = `SELECT v.id as venta_id, DATE(v.fecha) as fecha, strftime('%H:%M', v.fecha) as hora,
+               cl.nombre as cliente, cl.ci, cl.tipo as tipo_cliente,
+               u.nombre as cajero,
+               cat.nombre as categoria, cd.nombre as codigo,
+               i.nombre as item, un.abreviatura as unidad,
+               dv.cantidad, dv.precio_unitario, dv.subtotal, v.total,
+               dv.numeracion_desde, dv.numeracion_hasta
+             FROM ventas v
+             JOIN detalle_ventas dv ON dv.venta_id = v.id
+             JOIN items i ON dv.item_id = i.id
+             JOIN categorias cat ON i.categoria_id = cat.id
+             LEFT JOIN codigos cd ON i.codigo_id = cd.id
+             JOIN unidades un ON dv.unidad_id = un.id
+             JOIN usuarios u ON v.usuario_id = u.id
+             LEFT JOIN clientes cl ON v.cliente_id = cl.id
+             WHERE ${where}
+             ORDER BY v.fecha DESC`;
+    }
+
+    const r = await query(c.env, sql, args);
+    return c.json({ rows: r.rows, agrupacion: agrupacion || "detalle" });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+route.get("/meta", async (c) => {
+  const [categorias, items, codigos, cajeros] = await Promise.all([
+    query(c.env, "SELECT id, nombre FROM categorias WHERE activo = 1 ORDER BY nombre"),
+    query(c.env, "SELECT id, nombre FROM items WHERE activo = 1 ORDER BY nombre"),
+    query(c.env, "SELECT id, nombre, descripcion FROM codigos WHERE activo = 1 ORDER BY nombre"),
+    query(c.env, "SELECT id, nombre FROM usuarios WHERE activo = 1 ORDER BY nombre"),
+  ]);
+  return c.json({ categorias: categorias.rows, items: items.rows, codigos: codigos.rows, cajeros: cajeros.rows });
+});
+
 export default route;

@@ -10,6 +10,8 @@ export default function Inventario() {
   const [tab, setTab] = useState<"stock" | "movimientos" | "nuevo_lote">("stock");
   const [formLote, setFormLote] = useState<any>({});
   const [lotesDelItem, setLotesDelItem] = useState<any[]>([]);
+  const [accionLote, setAccionLote] = useState<"agregar" | "retirar">("agregar");
+  const [formRetiro, setFormRetiro] = useState<any>({});
   const [desde, setDesde] = useState(new Date().toISOString().split("T")[0]);
   const [hasta, setHasta] = useState(new Date().toISOString().split("T")[0]);
   const hoy = new Date().toISOString().split("T")[0];
@@ -37,18 +39,30 @@ export default function Inventario() {
     setMovimientos(r || []);
   }
 
-  async function onSelectItem(item_id: number) {
-    setFormLote({ ...formLote, item_id });
+  async function onSelectItem(item_id: number, esRetiro = false) {
+    if (esRetiro) setFormRetiro({ ...formRetiro, item_id });
+    else setFormLote({ ...formLote, item_id });
     if (!item_id) { setLotesDelItem([]); return; }
     const lotes = stock.filter((l: any) => Number(l.item_id) === Number(item_id));
     if (lotes.length > 0) {
       setLotesDelItem(lotes);
     } else {
-      // Si stock no está cargado aún, hacer la llamada
       const r = await api.get("/inventario/stock");
       setStock(r || []);
       setLotesDelItem((r || []).filter((l: any) => Number(l.item_id) === Number(item_id)));
     }
+  }
+
+  async function retirarLote() {
+    if (!formRetiro.lote_id) return alert("Selecciona un lote a retirar");
+    if (!formRetiro.motivo?.trim()) return alert("Debes justificar el motivo del retiro");
+    if (!confirm(`¿Confirmas retirar este lote?\n\nMotivo: ${formRetiro.motivo}`)) return;
+    await api.post("/inventario/retirar-lote", { ...formRetiro, usuario_id: user?.id });
+    setFormRetiro({});
+    setLotesDelItem([]);
+    loadStock();
+    setMsg("LOTE RETIRADO ✓");
+    setTimeout(() => setMsg(""), 3000);
   }
 
   async function agregarLote() {
@@ -278,68 +292,133 @@ export default function Inventario() {
         {/* ===== NUEVO LOTE ===== */}
         {tab === "nuevo_lote" && (
           <>
-            <h3 style={{ marginBottom: "0.5rem", color: "#333" }}>AGREGAR NUEVO LOTE</h3>
-            <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: "1.5rem" }}>
-              Usa esto cuando lleguen nuevos talonarios o documentos para un item ya existente. Se crea un nuevo lote con su propia numeración y el sistema lo usará automáticamente en ventas cuando el lote anterior se agote.
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", maxWidth: "600px" }}>
-              <div style={{ gridColumn: "span 2" }}>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM</label>
-                <select style={inputStyle} value={formLote.item_id || ""} onChange={e => onSelectItem(Number(e.target.value))}>
-                  <option value="">Seleccionar item...</option>
-                  {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
-                </select>
-              </div>
+            {/* Toggle agregar / retirar */}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+              <button onClick={() => { setAccionLote("agregar"); setFormLote({}); setFormRetiro({}); setLotesDelItem([]); }}
+                style={{ padding: "0.6rem 1.5rem", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: accionLote === "agregar" ? "bold" : "normal", background: accionLote === "agregar" ? "#4CAF50" : "#f0f0f0", color: accionLote === "agregar" ? "#fff" : "#666" }}>
+                📥 AGREGAR LOTE
+              </button>
+              <button onClick={() => { setAccionLote("retirar"); setFormLote({}); setFormRetiro({}); setLotesDelItem([]); }}
+                style={{ padding: "0.6rem 1.5rem", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: accionLote === "retirar" ? "bold" : "normal", background: accionLote === "retirar" ? "#f44336" : "#f0f0f0", color: accionLote === "retirar" ? "#fff" : "#666" }}>
+                📤 RETIRAR LOTE
+              </button>
+            </div>
 
-              {/* Lotes existentes del item seleccionado */}
-              {lotesDelItem.length > 0 && (
-                <div style={{ gridColumn: "span 2", background: "#fff8e1", border: "1px solid #FFD54F", borderRadius: "8px", padding: "0.75rem 1rem" }}>
-                  <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#e65100", marginBottom: "0.5rem" }}>⚠️ LOTES EXISTENTES — asegúrate de no repetir numeración:</p>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead><tr>
-                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>LOTE</th>
-                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>NUMERACIÓN</th>
-                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>ACTUAL DESDE</th>
-                      <th style={{ padding: "0.3rem 0.5rem", textAlign: "center", fontSize: "0.75rem", color: "#888" }}>STOCK</th>
-                    </tr></thead>
-                    <tbody>{lotesDelItem.map((l: any, idx: number) => (
-                      <tr key={l.lote_id} style={{ borderTop: "1px solid #FFE082" }}>
-                        <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", color: "#666" }}>Lote #{idx + 1}</td>
-                        <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", fontWeight: "bold" }}>{l.numeracion_inicio} — {l.numeracion_fin}</td>
-                        <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", color: "#1565c0" }}>{l.numeracion_actual}</td>
-                        <td style={{ padding: "0.3rem 0.5rem", textAlign: "center" }}>
-                          <span style={{ background: l.stock_actual <= 5 ? "#ffebee" : "#e8f5e9", color: l.stock_actual <= 5 ? "#c62828" : "#2e7d32", padding: "0.1rem 0.5rem", borderRadius: "8px", fontWeight: "bold", fontSize: "0.82rem" }}>
-                            {l.stock_actual}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}</tbody>
-                  </table>
-                </div>
-              )}
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN INICIO</label>
-                <input type="number" style={inputStyle} value={formLote.numeracion_inicio || ""} onChange={e => setFormLote({ ...formLote, numeracion_inicio: Number(e.target.value) })} placeholder="ej: 001" />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN FIN</label>
-                <input type="number" style={inputStyle} value={formLote.numeracion_fin || ""} onChange={e => setFormLote({ ...formLote, numeracion_fin: Number(e.target.value) })} placeholder="ej: 500" />
-              </div>
-              {formLote.numeracion_inicio && formLote.numeracion_fin && Number(formLote.numeracion_fin) > Number(formLote.numeracion_inicio) && (
-                <div style={{ gridColumn: "span 2" }}>
-                  <div style={{ background: "#e8f5e9", borderRadius: "6px", padding: "0.6rem 1rem", fontSize: "0.9rem", color: "#2e7d32" }}>
-                    📦 CANTIDAD: <b>{Number(formLote.numeracion_fin) - Number(formLote.numeracion_inicio) + 1}</b> documentos
+            {/* ---- AGREGAR ---- */}
+            {accionLote === "agregar" && (
+              <>
+                <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: "1.25rem" }}>
+                  Registra nuevos talonarios o documentos para un item existente. El sistema los usará automáticamente en ventas cuando el lote anterior se agote.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", maxWidth: "600px" }}>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM</label>
+                    <select style={inputStyle} value={formLote.item_id || ""} onChange={e => onSelectItem(Number(e.target.value))}>
+                      <option value="">Seleccionar item...</option>
+                      {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
+                    </select>
+                  </div>
+
+                  {lotesDelItem.length > 0 && (
+                    <div style={{ gridColumn: "span 2", background: "#fff8e1", border: "1px solid #FFD54F", borderRadius: "8px", padding: "0.75rem 1rem" }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#e65100", marginBottom: "0.5rem" }}>⚠️ LOTES ACTIVOS — no repitas numeración:</p>
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead><tr>
+                          <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>LOTE</th>
+                          <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>NUMERACIÓN</th>
+                          <th style={{ padding: "0.3rem 0.5rem", textAlign: "left", fontSize: "0.75rem", color: "#888" }}>ACTUAL DESDE</th>
+                          <th style={{ padding: "0.3rem 0.5rem", textAlign: "center", fontSize: "0.75rem", color: "#888" }}>STOCK</th>
+                        </tr></thead>
+                        <tbody>{lotesDelItem.map((l: any, idx: number) => (
+                          <tr key={l.lote_id} style={{ borderTop: "1px solid #FFE082" }}>
+                            <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", color: "#666" }}>Lote #{idx + 1}</td>
+                            <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", fontWeight: "bold" }}>{l.numeracion_inicio} — {l.numeracion_fin}</td>
+                            <td style={{ padding: "0.3rem 0.5rem", fontSize: "0.82rem", color: "#1565c0" }}>{l.numeracion_actual}</td>
+                            <td style={{ padding: "0.3rem 0.5rem", textAlign: "center" }}>
+                              <span style={{ background: l.stock_actual <= 5 ? "#ffebee" : "#e8f5e9", color: l.stock_actual <= 5 ? "#c62828" : "#2e7d32", padding: "0.1rem 0.5rem", borderRadius: "8px", fontWeight: "bold", fontSize: "0.82rem" }}>{l.stock_actual}</span>
+                            </td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN INICIO</label>
+                    <input type="number" style={inputStyle} value={formLote.numeracion_inicio || ""} onChange={e => setFormLote({ ...formLote, numeracion_inicio: Number(e.target.value) })} placeholder="ej: 001" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 NUMERACIÓN FIN</label>
+                    <input type="number" style={inputStyle} value={formLote.numeracion_fin || ""} onChange={e => setFormLote({ ...formLote, numeracion_fin: Number(e.target.value) })} placeholder="ej: 500" />
+                  </div>
+                  {formLote.numeracion_inicio && formLote.numeracion_fin && Number(formLote.numeracion_fin) > Number(formLote.numeracion_inicio) && (
+                    <div style={{ gridColumn: "span 2" }}>
+                      <div style={{ background: "#e8f5e9", borderRadius: "6px", padding: "0.6rem 1rem", fontSize: "0.9rem", color: "#2e7d32" }}>
+                        📦 CANTIDAD: <b>{Number(formLote.numeracion_fin) - Number(formLote.numeracion_inicio) + 1}</b> documentos
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / JUSTIFICACIÓN <span style={{ color: "#f44336" }}>*</span></label>
+                    <input style={inputStyle} value={formLote.motivo || ""} onChange={e => setFormLote({ ...formLote, motivo: e.target.value })} placeholder="ej: Compra de talonarios gestión 2025" />
                   </div>
                 </div>
-              )}
-              <div style={{ gridColumn: "span 2" }}>
-                <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / OBSERVACIÓN</label>
-                <input style={inputStyle} value={formLote.motivo || ""} onChange={e => setFormLote({ ...formLote, motivo: e.target.value })} placeholder="ej: Compra de talonarios gestión 2025" />
-              </div>
-            </div>
-            <button onClick={agregarLote} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#4CAF50", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
-              ✅ REGISTRAR NUEVO LOTE
-            </button>
+                <button onClick={agregarLote} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#4CAF50", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+                  ✅ REGISTRAR NUEVO LOTE
+                </button>
+              </>
+            )}
+
+            {/* ---- RETIRAR ---- */}
+            {accionLote === "retirar" && (
+              <>
+                <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: "1.25rem" }}>
+                  Retira un lote activo del sistema. El lote quedará inactivo y sus documentos no podrán venderse. <b>Debe estar justificado.</b>
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", maxWidth: "600px" }}>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM</label>
+                    <select style={inputStyle} value={formRetiro.item_id || ""} onChange={e => onSelectItem(Number(e.target.value), true)}>
+                      <option value="">Seleccionar item...</option>
+                      {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
+                    </select>
+                  </div>
+
+                  {lotesDelItem.length > 0 && (
+                    <div style={{ gridColumn: "span 2" }}>
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>SELECCIONAR LOTE A RETIRAR</label>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
+                        {lotesDelItem.map((l: any, idx: number) => (
+                          <label key={l.lote_id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", border: `2px solid ${formRetiro.lote_id === l.lote_id ? "#f44336" : "#ddd"}`, borderRadius: "8px", cursor: "pointer", background: formRetiro.lote_id === l.lote_id ? "#ffebee" : "#fafafa" }}>
+                            <input type="radio" name="lote" checked={formRetiro.lote_id === l.lote_id}
+                              onChange={() => setFormRetiro({ ...formRetiro, lote_id: l.lote_id, item_id: l.item_id, stock_actual: l.stock_actual })} />
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontWeight: "bold", fontSize: "0.9rem" }}>Lote #{idx + 1} — </span>
+                              <span style={{ fontSize: "0.9rem" }}>Numeración {l.numeracion_inicio} al {l.numeracion_fin}</span>
+                              <span style={{ marginLeft: "0.75rem", fontSize: "0.82rem", color: "#666" }}>| Actual desde: {l.numeracion_actual}</span>
+                            </div>
+                            <span style={{ background: l.stock_actual <= 5 ? "#ffebee" : "#e8f5e9", color: l.stock_actual <= 5 ? "#c62828" : "#2e7d32", padding: "0.2rem 0.6rem", borderRadius: "8px", fontWeight: "bold", fontSize: "0.85rem" }}>
+                              {l.stock_actual} docs
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / JUSTIFICACIÓN <span style={{ color: "#f44336" }}>*</span></label>
+                    <textarea style={{ ...inputStyle, height: "80px", resize: "vertical" } as any}
+                      value={formRetiro.motivo || ""}
+                      onChange={e => setFormRetiro({ ...formRetiro, motivo: e.target.value })}
+                      placeholder="ej: Documentos extraviados, gestión anterior finalizada, lote dañado..." />
+                  </div>
+                </div>
+                <button onClick={retirarLote} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#f44336", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+                  📤 CONFIRMAR RETIRO DE LOTE
+                </button>
+              </>
+            )}
           </>
         )}
       </div>
