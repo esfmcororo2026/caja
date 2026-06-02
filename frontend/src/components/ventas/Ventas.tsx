@@ -161,34 +161,31 @@ export default function Ventas() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.75rem" }}>
               {items.filter(i => i.categoria_id === catActiva).map(i => {
                 const bgColor = colorMap[i.categoria_id];
+                const sinStock = i.tiene_stock && Number(i.stock_actual) <= 0;
                 return (
-                  <div key={i.id} onClick={() => agregarItem(i)}
+                  <div key={i.id} onClick={() => !sinStock && agregarItem(i)}
                     style={{
-                      background: bgColor,
+                      background: sinStock ? "#bbb" : bgColor,
                       borderRadius: "12px",
                       padding: "1rem",
-                      cursor: "pointer",
+                      cursor: sinStock ? "not-allowed" : "pointer",
                       textAlign: "center",
                       transition: "all 0.2s",
                       color: "#fff",
+                      opacity: sinStock ? 0.55 : 1,
                       boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                       transform: "scale(1)"
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = "scale(1.05)";
-                      e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.2)";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = "scale(1)";
-                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
-                    }}>
-                    <div style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>📦</div>
+                    onMouseEnter={e => { if (!sinStock) { e.currentTarget.style.transform = "scale(1.05)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.2)"; } }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)"; }}>
+                    <div style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>{sinStock ? "🚫" : "📦"}</div>
                     <div style={{ fontWeight: "bold", marginBottom: "0.3rem", fontSize: "0.95rem", lineHeight: "1.2" }}>{i.nombre}</div>
                     <div style={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "0.3rem" }}>Bs. {Number(i.precio).toFixed(2)}</div>
-                      <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{i.unidad_nombre} {i.tiene_stock ? `| Stock: ${i.stock_actual}` : "| ∞"}</div>
-                    {i.numeracion_actual > 0 && i.stock_actual > 0 && (
+                    <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{i.unidad_nombre} {i.tiene_stock ? `| Stock: ${i.stock_actual}` : "| ∞"}</div>
+                    {Number(i.numeracion_actual) > 0 && Number(i.stock_actual) > 0 && (
                       <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: "0.2rem" }}>📄 Desde N° {i.numeracion_actual}</div>
                     )}
+                    {sinStock && <div style={{ fontSize: "0.72rem", marginTop: "0.3rem", fontWeight: "bold" }}>SIN STOCK</div>}
                   </div>
                 );
               })}
