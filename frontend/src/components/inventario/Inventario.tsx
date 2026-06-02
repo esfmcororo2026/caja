@@ -14,6 +14,7 @@ export default function Inventario() {
   const [formRetiro, setFormRetiro] = useState<any>({});
   const [accionBaja, setAccionBaja] = useState<"baja_reposicion" | "devolucion">("baja_reposicion");
   const [formBaja, setFormBaja] = useState<any>({ cantidad: 1 });
+  const [lotesBaja, setLotesBaja] = useState<any[]>([]);
   const [desde, setDesde] = useState(new Date().toISOString().split("T")[0]);
   const [hasta, setHasta] = useState(new Date().toISOString().split("T")[0]);
   const hoy = new Date().toISOString().split("T")[0];
@@ -55,15 +56,40 @@ export default function Inventario() {
     }
   }
 
+  async function onSelectItemBaja(item_id: number) {
+    setFormBaja({ cantidad: 1, item_id });
+    if (!item_id) { setLotesBaja([]); return; }
+    const lotes = stock.filter((l: any) => Number(l.item_id) === Number(item_id));
+    if (lotes.length > 0) {
+      setLotesBaja(lotes);
+    } else {
+      const r = await api.get("/inventario/stock");
+      setStock(r || []);
+      setLotesBaja((r || []).filter((l: any) => Number(l.item_id) === Number(item_id)));
+    }
+  }
+
   async function registrarBaja() {
     if (!formBaja.item_id) return alert("Selecciona un item");
     if (!formBaja.motivo?.trim()) return alert("Debes ingresar el motivo / justificación");
-    if (accionBaja === "devolucion" && (!formBaja.cantidad || formBaja.cantidad < 1)) return alert("Ingresa la cantidad a devolver");
-    if (!confirm(`¿Confirmas registrar esta ${accionBaja === "baja_reposicion" ? "baja y reposición" : "devolución"}?\n\nMotivo: ${formBaja.motivo}`)) return;
+    if (accionBaja === "baja_reposicion") {
+      if (!formBaja.numero_baja) return alert("Ingresa el número del documento dado de baja");
+      if (!formBaja.numero_reposicion) return alert("Ingresa el número del documento de reposición");
+    }
+    if (accionBaja === "devolucion") {
+      if (!formBaja.numeracion_desde) return alert("Ingresa el número desde");
+      if (!formBaja.numeracion_hasta) return alert("Ingresa el número hasta");
+      if (Number(formBaja.numeracion_hasta) < Number(formBaja.numeracion_desde)) return alert("El número hasta debe ser mayor o igual al número desde");
+    }
+    const resumen = accionBaja === "baja_reposicion"
+      ? `N° de baja: ${formBaja.numero_baja} → Reposición: ${formBaja.numero_reposicion}`
+      : `Rango: ${formBaja.numeracion_desde} al ${formBaja.numeracion_hasta} (${formBaja.cantidad} unidades)`;
+    if (!confirm(`¿Confirmas registrar esta ${accionBaja === "baja_reposicion" ? "baja y reposición" : "devolución"}?\n\n${resumen}\n\nMotivo: ${formBaja.motivo}`)) return;
     const endpoint = accionBaja === "baja_reposicion" ? "/inventario/baja-reposicion" : "/inventario/devolucion";
     const res = await api.post(endpoint, { ...formBaja, usuario_id: user?.id });
     if (res?.error) return alert("Error: " + res.error);
     setFormBaja({ cantidad: 1 });
+    setLotesBaja([]);
     loadStock();
     setMsg(accionBaja === "baja_reposicion" ? "BAJA Y REPOSICIÓN REGISTRADA ✓" : "DEVOLUCIÓN REGISTRADA ✓");
     setTimeout(() => setMsg(""), 3000);
@@ -121,7 +147,7 @@ export default function Inventario() {
         <button style={tabStyle("stock")} onClick={() => { setTab("stock"); loadStock(); }}>📦 STOCK ACTUAL</button>
         <button style={tabStyle("movimientos")} onClick={() => { setTab("movimientos"); loadMovimientos(); }}>📋 MOVIMIENTOS</button>
         <button style={tabStyle("nuevo_lote")} onClick={() => setTab("nuevo_lote")}>➕ NUEVO LOTE</button>
-        <button style={tabStyle("bajas")} onClick={() => setTab("bajas")}>⬇️ BAJAS</button>
+        <button style={tabStyle("bajas")} onClick={() => { setTab("bajas"); setLotesBaja([]); setFormBaja({ cantidad: 1 }); }}>⬇️ BAJAS</button>
       </div>
 
       <div style={{ background: "#fff", borderRadius: "0 8px 8px 8px", padding: "1.5rem", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
@@ -450,13 +476,12 @@ export default function Inventario() {
         {/* ===== BAJAS ===== */}
         {tab === "bajas" && (
           <>
-            {/* Toggle baja_reposicion / devolucion */}
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
-              <button onClick={() => { setAccionBaja("baja_reposicion"); setFormBaja({ cantidad: 1 }); }}
+              <button onClick={() => { setAccionBaja("baja_reposicion"); setFormBaja({ cantidad: 1 }); setLotesBaja([]); }}
                 style={{ padding: "0.6rem 1.5rem", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: accionBaja === "baja_reposicion" ? "bold" : "normal", background: accionBaja === "baja_reposicion" ? "#FF6B35" : "#f0f0f0", color: accionBaja === "baja_reposicion" ? "#fff" : "#666" }}>
                 🔄 BAJA Y REPOSICIÓN
               </button>
-              <button onClick={() => { setAccionBaja("devolucion"); setFormBaja({ cantidad: 1 }); }}
+              <button onClick={() => { setAccionBaja("devolucion"); setFormBaja({ cantidad: 1 }); setLotesBaja([]); }}
                 style={{ padding: "0.6rem 1.5rem", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: accionBaja === "devolucion" ? "bold" : "normal", background: accionBaja === "devolucion" ? "#8E44AD" : "#f0f0f0", color: accionBaja === "devolucion" ? "#fff" : "#666" }}>
                 ↩️ DEVOLUCIÓN
               </button>
@@ -466,22 +491,70 @@ export default function Inventario() {
             {accionBaja === "baja_reposicion" && (
               <>
                 <div style={{ background: "#fff3ee", border: "1px solid #FF6B35", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#c0392b" }}>
-                  🔄 <b>BAJA Y REPOSICIÓN</b>: Un item ya vendido resultó dañado o defectuoso. Se descuenta 1 unidad del stock actual como reposición. <b>No genera movimiento económico.</b>
+                  🔄 <b>BAJA Y REPOSICIÓN</b>: Un item ya vendido resultó dañado o defectuoso. Se registra el número dado de baja y el que se entrega como reposición. <b>No genera movimiento económico.</b>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", maxWidth: "600px" }}>
-                  <div style={{ gridColumn: "span 2" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem", maxWidth: "700px" }}>
+                  <div>
                     <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM A REPONER</label>
-                    <select style={inputStyle} value={formBaja.item_id || ""} onChange={e => setFormBaja({ ...formBaja, item_id: Number(e.target.value) })}>
+                    <select style={inputStyle} value={formBaja.item_id || ""} onChange={e => onSelectItemBaja(Number(e.target.value))}>
                       <option value="">Seleccionar item...</option>
                       {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
                     </select>
                   </div>
-                  <div style={{ gridColumn: "span 2" }}>
+
+                  {lotesBaja.length > 0 && (
+                    <div style={{ background: "#fff8e1", border: "1px solid #FFD54F", borderRadius: "8px", padding: "0.75rem 1rem" }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#e65100", marginBottom: "0.5rem" }}>📋 LOTES DISPONIBLES:</p>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                        <thead><tr style={{ borderBottom: "1px solid #FFE082" }}>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>LOTE</th>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>NUMERACIÓN</th>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>ACTUAL DESDE</th>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "center", color: "#888" }}>STOCK</th>
+                        </tr></thead>
+                        <tbody>{lotesBaja.map((l: any, idx: number) => (
+                          <tr key={l.lote_id} style={{ borderTop: "1px solid #FFE082" }}>
+                            <td style={{ padding: "0.4rem 0.5rem", color: "#666" }}>Lote #{idx + 1}</td>
+                            <td style={{ padding: "0.4rem 0.5rem", fontWeight: "bold" }}>{l.numeracion_inicio} — {l.numeracion_fin}</td>
+                            <td style={{ padding: "0.4rem 0.5rem", color: "#1565c0", fontWeight: "bold" }}>{l.numeracion_actual}</td>
+                            <td style={{ padding: "0.4rem 0.5rem", textAlign: "center" }}>
+                              <span style={{ background: l.stock_actual <= 5 ? "#ffebee" : "#e8f5e9", color: l.stock_actual <= 5 ? "#c62828" : "#2e7d32", padding: "0.1rem 0.5rem", borderRadius: "8px", fontWeight: "bold" }}>{l.stock_actual}</span>
+                            </td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 N° DADO DE BAJA <span style={{ color: "#f44336" }}>*</span></label>
+                      <input type="number" style={inputStyle} value={formBaja.numero_baja || ""}
+                        onChange={e => setFormBaja({ ...formBaja, numero_baja: e.target.value })}
+                        placeholder="ej: 00125" />
+                      <p style={{ fontSize: "0.75rem", color: "#888", marginTop: "0.25rem" }}>Número del documento defectuoso</p>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔄 N° DE REPOSICIÓN <span style={{ color: "#f44336" }}>*</span></label>
+                      <input type="number" style={inputStyle} value={formBaja.numero_reposicion || ""}
+                        onChange={e => setFormBaja({ ...formBaja, numero_reposicion: e.target.value })}
+                        placeholder="ej: 00150" />
+                      <p style={{ fontSize: "0.75rem", color: "#888", marginTop: "0.25rem" }}>Número del documento de reposición</p>
+                    </div>
+                  </div>
+
+                  {formBaja.numero_baja && formBaja.numero_reposicion && (
+                    <div style={{ background: "#fff3ee", border: "1px solid #FF6B35", borderRadius: "8px", padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#c0392b" }}>
+                      📝 <b>RESUMEN:</b> Se da de baja el N° <b>{formBaja.numero_baja}</b> y se repone con el N° <b>{formBaja.numero_reposicion}</b>
+                    </div>
+                  )}
+
+                  <div>
                     <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / JUSTIFICACIÓN <span style={{ color: "#f44336" }}>*</span></label>
                     <textarea style={{ ...inputStyle, height: "80px", resize: "vertical" } as any}
                       value={formBaja.motivo || ""}
                       onChange={e => setFormBaja({ ...formBaja, motivo: e.target.value })}
-                      placeholder="ej: Formulario vendido al Sr. [nombre] resultó defectuoso, se repone con el siguiente" />
+                      placeholder="ej: Formulario N° 00125 resultó defectuoso, se repone con N° 00150" />
                   </div>
                 </div>
                 <button onClick={registrarBaja} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#FF6B35", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
@@ -494,26 +567,76 @@ export default function Inventario() {
             {accionBaja === "devolucion" && (
               <>
                 <div style={{ background: "#f5eef8", border: "1px solid #8E44AD", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#6c3483" }}>
-                  ↩️ <b>DEVOLUCIÓN</b>: El cliente devuelve un item. Este vuelve al stock disponible. <b>No genera ingreso económico.</b>
+                  ↩️ <b>DEVOLUCIÓN</b>: El cliente devuelve items listos para venta. Especifica el rango de números devueltos. <b>No genera ingreso económico.</b>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", maxWidth: "600px" }}>
-                  <div style={{ gridColumn: "span 2" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem", maxWidth: "700px" }}>
+                  <div>
                     <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM DEVUELTO</label>
-                    <select style={inputStyle} value={formBaja.item_id || ""} onChange={e => setFormBaja({ ...formBaja, item_id: Number(e.target.value) })}>
+                    <select style={inputStyle} value={formBaja.item_id || ""} onChange={e => onSelectItemBaja(Number(e.target.value))}>
                       <option value="">Seleccionar item...</option>
                       {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label style={{ fontSize: "0.8rem", color: "#666" }}>CANTIDAD A DEVOLVER</label>
-                    <input type="number" min="1" style={inputStyle} value={formBaja.cantidad || 1} onChange={e => setFormBaja({ ...formBaja, cantidad: Number(e.target.value) })} />
+
+                  {lotesBaja.length > 0 && (
+                    <div style={{ background: "#f5eef8", border: "1px solid #CE93D8", borderRadius: "8px", padding: "0.75rem 1rem" }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#6c3483", marginBottom: "0.5rem" }}>📋 LOTES DISPONIBLES:</p>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                        <thead><tr style={{ borderBottom: "1px solid #CE93D8" }}>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>LOTE</th>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>NUMERACIÓN</th>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>ACTUAL DESDE</th>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "center", color: "#888" }}>STOCK</th>
+                        </tr></thead>
+                        <tbody>{lotesBaja.map((l: any, idx: number) => (
+                          <tr key={l.lote_id} style={{ borderTop: "1px solid #CE93D8" }}>
+                            <td style={{ padding: "0.4rem 0.5rem", color: "#666" }}>Lote #{idx + 1}</td>
+                            <td style={{ padding: "0.4rem 0.5rem", fontWeight: "bold" }}>{l.numeracion_inicio} — {l.numeracion_fin}</td>
+                            <td style={{ padding: "0.4rem 0.5rem", color: "#1565c0", fontWeight: "bold" }}>{l.numeracion_actual}</td>
+                            <td style={{ padding: "0.4rem 0.5rem", textAlign: "center" }}>
+                              <span style={{ background: l.stock_actual <= 5 ? "#ffebee" : "#e8f5e9", color: l.stock_actual <= 5 ? "#c62828" : "#2e7d32", padding: "0.1rem 0.5rem", borderRadius: "8px", fontWeight: "bold" }}>{l.stock_actual}</span>
+                            </td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 N° DESDE <span style={{ color: "#f44336" }}>*</span></label>
+                      <input type="number" style={inputStyle} value={formBaja.numeracion_desde || ""}
+                        onChange={e => {
+                          const desde = Number(e.target.value);
+                          const hasta = Number(formBaja.numeracion_hasta || 0);
+                          setFormBaja({ ...formBaja, numeracion_desde: e.target.value, cantidad: hasta >= desde && hasta > 0 ? hasta - desde + 1 : 1 });
+                        }}
+                        placeholder="ej: 00100" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 N° HASTA <span style={{ color: "#f44336" }}>*</span></label>
+                      <input type="number" style={inputStyle} value={formBaja.numeracion_hasta || ""}
+                        onChange={e => {
+                          const hasta = Number(e.target.value);
+                          const desde = Number(formBaja.numeracion_desde || 0);
+                          setFormBaja({ ...formBaja, numeracion_hasta: e.target.value, cantidad: hasta >= desde && desde > 0 ? hasta - desde + 1 : 1 });
+                        }}
+                        placeholder="ej: 00105" />
+                    </div>
                   </div>
-                  <div style={{ gridColumn: "span 2" }}>
+
+                  {formBaja.numeracion_desde && formBaja.numeracion_hasta && formBaja.cantidad > 0 && (
+                    <div style={{ background: "#e8f5e9", borderRadius: "8px", padding: "0.75rem 1rem", fontSize: "0.9rem", color: "#2e7d32" }}>
+                      📦 <b>CANTIDAD A DEVOLVER: {formBaja.cantidad}</b> {formBaja.cantidad === 1 ? "unidad" : "unidades"} — del N° {formBaja.numeracion_desde} al N° {formBaja.numeracion_hasta}
+                    </div>
+                  )}
+
+                  <div>
                     <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / JUSTIFICACIÓN <span style={{ color: "#f44336" }}>*</span></label>
                     <textarea style={{ ...inputStyle, height: "80px", resize: "vertical" } as any}
                       value={formBaja.motivo || ""}
                       onChange={e => setFormBaja({ ...formBaja, motivo: e.target.value })}
-                      placeholder="ej: Cliente devuelve formulario porque se equivocó de tramite" />
+                      placeholder="ej: Cliente devuelve formularios N° 00100 al 00105 por error de trámite" />
                   </div>
                 </div>
                 <button onClick={registrarBaja} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#8E44AD", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
