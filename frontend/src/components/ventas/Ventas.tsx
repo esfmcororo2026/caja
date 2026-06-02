@@ -82,9 +82,17 @@ export default function Ventas() {
     });
     
     if (res?.id) {
+      // Obtener detalle con numeraciones asignadas
+      const detalleRes = await api.get(`/ventas/${res.id}/detalle`);
+      const carritoConNums = detalleRes?.length
+        ? carrito.map((c: any) => {
+            const d = detalleRes.find((r: any) => r.item_id === c.item_id);
+            return d ? { ...c, num_desde: d.numeracion_desde, num_hasta: d.numeracion_hasta } : c;
+          })
+        : carrito;
       const venta = { 
         id: res.id, 
-        carrito, 
+        carrito: carritoConNums, 
         total, 
         persona: personaSeleccionada.nombre, 
         fecha: new Date().toLocaleString() 
@@ -177,7 +185,10 @@ export default function Ventas() {
                     <div style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>📦</div>
                     <div style={{ fontWeight: "bold", marginBottom: "0.3rem", fontSize: "0.95rem", lineHeight: "1.2" }}>{i.nombre}</div>
                     <div style={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "0.3rem" }}>Bs. {Number(i.precio).toFixed(2)}</div>
-                    <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{i.unidad_nombre} {i.tiene_stock ? `| Stock: ${i.stock_actual}` : "| ∞"}</div>
+                      <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{i.unidad_nombre} {i.tiene_stock ? `| Stock: ${i.stock_actual}` : "| ∞"}</div>
+                    {i.numeracion_actual > 0 && i.stock_actual > 0 && (
+                      <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: "0.2rem" }}>📄 Desde N° {i.numeracion_actual}</div>
+                    )}
                   </div>
                 );
               })}
@@ -194,6 +205,9 @@ export default function Ventas() {
               {carrito.map(c => (
                 <div key={c.item_id} style={{ borderBottom: "1px solid #f0f0f0", paddingBottom: "0.75rem", marginBottom: "0.75rem" }}>
                   <div style={{ fontWeight: "bold", fontSize: "0.9rem", marginBottom: "0.3rem" }}>{c.nombre}</div>
+                  {c.num_desde && (
+                    <div style={{ fontSize: "0.78rem", color: "#1565c0", marginBottom: "0.25rem" }}>📄 N° {c.num_desde}{c.num_hasta && c.num_hasta !== c.num_desde ? ` al ${c.num_hasta}` : ""}</div>
+                  )}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       <button onClick={() => cambiarCantidad(c.item_id, c.cantidad - 1)} style={{ width: "28px", height: "28px", border: "1px solid #ddd", borderRadius: "4px", cursor: "pointer", background: "#f5f5f5" }}>−</button>

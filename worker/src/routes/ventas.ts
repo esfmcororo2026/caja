@@ -11,6 +11,14 @@ route.get("/", async (c) => {
   return c.json(r.rows);
 });
 
+route.get("/:id/detalle", async (c) => {
+  const { id } = c.req.param();
+  const r = await query(c.env,
+    "SELECT dv.*, i.nombre FROM detalle_ventas dv JOIN items i ON dv.item_id = i.id WHERE dv.venta_id = ?",
+    [id]);
+  return c.json(r.rows);
+});
+
 route.post("/", async (c) => {
   try {
     const { persona_id, cliente_id, usuario_id, total, detalle } = await c.req.json();
@@ -51,7 +59,8 @@ route.post("/", async (c) => {
         "INSERT INTO detalle_ventas (venta_id, item_id, cantidad, precio_unitario, subtotal, unidad_id, numeracion_desde, numeracion_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [venta_id, d.item_id, d.cantidad, d.precio_unitario, d.subtotal, d.unidad_id, num_desde, num_hasta]
       );
-      await query(c.env, "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'venta', ?, ?, ?)", [d.item_id, d.cantidad, `Venta #${venta_id}`, usuario_id]);
+      await query(c.env, "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'venta', ?, ?, ?)",
+        [d.item_id, d.cantidad, num_desde ? `Venta #${venta_id} | N° ${num_desde}${num_hasta !== num_desde ? ` al ${num_hasta}` : ""}` : `Venta #${venta_id}`, usuario_id]);
     }
     return c.json({ id: venta_id });
   } catch (e: any) {
