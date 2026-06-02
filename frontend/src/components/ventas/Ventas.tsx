@@ -161,7 +161,7 @@ export default function Ventas() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.75rem" }}>
               {items.filter(i => i.categoria_id === catActiva).map(i => {
                 const bgColor = colorMap[i.categoria_id];
-                const sinStock = Number(i.tiene_stock) === 1 && Number(i.stock_actual) <= 0;
+                const sinStock = Number(i.tiene_stock) === 1 && Number(i.stock_actual) <= 0 && Number(i.numeracion_actual) > 0;
                 return (
                   <div key={i.id} onClick={() => !sinStock && agregarItem(i)}
                     style={{
@@ -181,9 +181,9 @@ export default function Ventas() {
                     <div style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>{sinStock ? "🚫" : "📦"}</div>
                     <div style={{ fontWeight: "bold", marginBottom: "0.3rem", fontSize: "0.95rem", lineHeight: "1.2" }}>{i.nombre}</div>
                     <div style={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "0.3rem" }}>Bs. {Number(i.precio).toFixed(2)}</div>
-                    <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{i.unidad_nombre} {i.tiene_stock ? `| Stock: ${i.stock_actual}` : "| ∞"}</div>
+                    <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{i.unidad_nombre}</div>
                     {Number(i.numeracion_actual) > 0 && Number(i.stock_actual) > 0 && (
-                      <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: "0.2rem" }}>📄 Desde N° {i.numeracion_actual}</div>
+                      <div style={{ fontSize: "0.7rem", opacity: 0.85, marginTop: "0.2rem" }}>📄 N° {i.numeracion_actual} | Stock: {i.stock_actual}</div>
                     )}
                     {sinStock && <div style={{ fontSize: "0.72rem", marginTop: "0.3rem", fontWeight: "bold" }}>SIN STOCK</div>}
                   </div>
