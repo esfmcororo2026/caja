@@ -161,7 +161,7 @@ export default function Ventas() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.75rem" }}>
               {items.filter(i => i.categoria_id === catActiva).map(i => {
                 const bgColor = colorMap[i.categoria_id];
-                const sinStock = i.tiene_stock && Number(i.stock_actual) <= 0;
+                const sinStock = Number(i.tiene_stock) === 1 && Number(i.stock_actual) <= 0;
                 return (
                   <div key={i.id} onClick={() => !sinStock && agregarItem(i)}
                     style={{
