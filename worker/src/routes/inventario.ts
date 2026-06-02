@@ -109,26 +109,48 @@ route.post("/retirar-lote", async (c) => {
 // Baja y reposicion: item vendido dañado, se repone con el siguiente del stock
 route.post("/baja-reposicion", async (c) => {
   try {
-    const { item_id, motivo, usuario_id } = await c.req.json();
-    if (!item_id || !motivo?.trim()) return c.json({ error: "item_id y motivo requeridos" }, 400);
-    // Descontar 1 del lote activo mas antiguo (FIFO)
+    const { item_id, numero_baja, motivo, usuario_id } = await c.req.json();
+    if (!item_id || !motivo?.trim() || !numero_baja) return c.json({ error: "item_id, numero_baja y motivo son requeridos" }, 400);
+
+    // Validar que el número de baja fue realmente vendido
+    const ventaR = await query(c.env,
+      "SELECT dv.* FROM detalle_ventas dv JOIN ventas v ON dv.venta_id = v.id WHERE dv.item_id = ? AND ? BETWEEN dv.numeracion_desde AND dv.numeracion_hasta LIMIT 1",
+      [item_id, numero_baja]
+    );
+    if (!ventaR.rows.length) return c.json({ error: `El N° ${numero_baja} no corresponde a ninguna venta registrada de este item` }, 400);
+
+    // Verificar que no se haya dado de baja antes
+    const yaRegistrado = await query(c.env,
+      "SELECT id FROM inventario_movimientos WHERE item_id = ? AND tipo = 'baja_reposicion' AND motivo LIKE ?",
+      [item_id, `%N° ${numero_baja}%`]
+    );
+    if (yaRegistrado.rows.length) return c.json({ error: `El N° ${numero_baja} ya fue registrado como baja anteriormente` }, 400);
+
+    // Verificar stock disponible para reponer
     const loteR = await query(c.env,
       "SELECT * FROM item_lotes WHERE item_id = ? AND activo = 1 AND stock_actual > 0 ORDER BY created_at ASC LIMIT 1",
       [item_id]);
-    if (!loteR.rows.length) return c.json({ error: "No hay stock disponible para reponer" }, 400);
+    if (!loteR.rows.length) return c.json({ error: "No hay stock disponible para entregar como reposición" }, 400);
+
     const lote = loteR.rows[0];
+    const numeroReposicion = lote.numeracion_actual;
     const nuevoStock = Number(lote.stock_actual) - 1;
+
     if (nuevoStock <= 0) {
       await query(c.env, "UPDATE item_lotes SET stock_actual = 0, activo = 0 WHERE id = ?", [lote.id]);
     } else {
       await query(c.env, "UPDATE item_lotes SET stock_actual = stock_actual - 1, numeracion_actual = numeracion_actual + 1 WHERE id = ?", [lote.id]);
     }
+
+    // Registrar con los números de baja y reposición en el motivo para trazabilidad
+    const motivoCompleto = `[BAJA N° ${numero_baja} → REPOSICIÓN N° ${numeroReposicion}] ${motivo}`;
     await query(c.env,
       "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'baja_reposicion', 1, ?, ?)",
-      [item_id, motivo, usuario_id]);
+      [item_id, motivoCompleto, usuario_id]);
+
     const stockTotal = await query(c.env, "SELECT COALESCE(SUM(stock_actual),0) as total FROM item_lotes WHERE item_id = ? AND activo = 1", [item_id]);
     await query(c.env, "UPDATE items SET stock_actual = ? WHERE id = ?", [stockTotal.rows[0].total, item_id]);
-    return c.json({ ok: true });
+    return c.json({ ok: true, numero_reposicion: numeroReposicion });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
   }
