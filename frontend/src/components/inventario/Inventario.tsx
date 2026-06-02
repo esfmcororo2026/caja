@@ -74,7 +74,8 @@ export default function Inventario() {
     if (!formBaja.motivo?.trim()) return alert("Debes ingresar el motivo / justificación");
     if (accionBaja === "baja_reposicion") {
       if (!formBaja.numero_baja) return alert("Ingresa el número del documento dado de baja");
-      if (!formBaja.numero_reposicion) return alert("Ingresa el número del documento de reposición");
+      const loteActivo = lotesBaja.find((l: any) => Number(l.stock_actual) > 0);
+      if (!loteActivo) return alert("No hay stock disponible para reponer");
     }
     if (accionBaja === "devolucion") {
       if (!formBaja.numeracion_desde) return alert("Ingresa el número desde");
@@ -82,7 +83,7 @@ export default function Inventario() {
       if (Number(formBaja.numeracion_hasta) < Number(formBaja.numeracion_desde)) return alert("El número hasta debe ser mayor o igual al número desde");
     }
     const resumen = accionBaja === "baja_reposicion"
-      ? `N° de baja: ${formBaja.numero_baja} → Reposición: ${formBaja.numero_reposicion}`
+      ? `N° de baja: ${formBaja.numero_baja} → Reposición: ${lotesBaja.find((l: any) => Number(l.stock_actual) > 0)?.numeracion_actual}`
       : `Rango: ${formBaja.numeracion_desde} al ${formBaja.numeracion_hasta} (${formBaja.cantidad} unidades)`;
     if (!confirm(`¿Confirmas registrar esta ${accionBaja === "baja_reposicion" ? "baja y reposición" : "devolución"}?\n\n${resumen}\n\nMotivo: ${formBaja.motivo}`)) return;
     const endpoint = accionBaja === "baja_reposicion" ? "/inventario/baja-reposicion" : "/inventario/devolucion";
@@ -491,7 +492,7 @@ export default function Inventario() {
             {accionBaja === "baja_reposicion" && (
               <>
                 <div style={{ background: "#fff3ee", border: "1px solid #FF6B35", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#c0392b" }}>
-                  🔄 <b>BAJA Y REPOSICIÓN</b>: Un item ya vendido resultó dañado o defectuoso. Se registra el número dado de baja y el que se entrega como reposición. <b>No genera movimiento económico.</b>
+                  🔄 <b>BAJA Y REPOSICIÓN</b>: Un item vendido resultó dañado. Se ingresa el número dado de baja y el sistema asigna el siguiente disponible del lote como reposición. <b>No genera movimiento económico.</b>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem", maxWidth: "700px" }}>
                   <div>
@@ -509,7 +510,7 @@ export default function Inventario() {
                         <thead><tr style={{ borderBottom: "1px solid #FFE082" }}>
                           <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>LOTE</th>
                           <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>NUMERACIÓN</th>
-                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>ACTUAL DESDE</th>
+                          <th style={{ padding: "0.4rem 0.5rem", textAlign: "left", color: "#888" }}>SIGUIENTE DISPONIBLE</th>
                           <th style={{ padding: "0.4rem 0.5rem", textAlign: "center", color: "#888" }}>STOCK</th>
                         </tr></thead>
                         <tbody>{lotesBaja.map((l: any, idx: number) => (
@@ -526,35 +527,37 @@ export default function Inventario() {
                     </div>
                   )}
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  {lotesBaja.length > 0 && (
                     <div>
-                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 N° DADO DE BAJA <span style={{ color: "#f44336" }}>*</span></label>
+                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔢 N° DEL ITEM DADO DE BAJA <span style={{ color: "#f44336" }}>*</span></label>
                       <input type="number" style={inputStyle} value={formBaja.numero_baja || ""}
                         onChange={e => setFormBaja({ ...formBaja, numero_baja: e.target.value })}
                         placeholder="ej: 00125" />
-                      <p style={{ fontSize: "0.75rem", color: "#888", marginTop: "0.25rem" }}>Número del documento defectuoso</p>
+                      <p style={{ fontSize: "0.75rem", color: "#888", marginTop: "0.25rem" }}>Número del documento defectuoso que se da de baja</p>
                     </div>
-                    <div>
-                      <label style={{ fontSize: "0.8rem", color: "#666" }}>🔄 N° DE REPOSICIÓN <span style={{ color: "#f44336" }}>*</span></label>
-                      <input type="number" style={inputStyle} value={formBaja.numero_reposicion || ""}
-                        onChange={e => setFormBaja({ ...formBaja, numero_reposicion: e.target.value })}
-                        placeholder="ej: 00150" />
-                      <p style={{ fontSize: "0.75rem", color: "#888", marginTop: "0.25rem" }}>Número del documento de reposición</p>
-                    </div>
-                  </div>
+                  )}
 
-                  {formBaja.numero_baja && formBaja.numero_reposicion && (
-                    <div style={{ background: "#fff3ee", border: "1px solid #FF6B35", borderRadius: "8px", padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#c0392b" }}>
-                      📝 <b>RESUMEN:</b> Se da de baja el N° <b>{formBaja.numero_baja}</b> y se repone con el N° <b>{formBaja.numero_reposicion}</b>
+                  {lotesBaja.length > 0 && (() => {
+                    const loteActivo = lotesBaja.find((l: any) => Number(l.stock_actual) > 0);
+                    return loteActivo ? (
+                      <div style={{ background: "#e8f5e9", border: "1px solid #81C784", borderRadius: "8px", padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#2e7d32" }}>
+                        🔄 <b>REPOSICIÓN AUTOMÁTICA:</b> Se entregará el N° <b>{loteActivo.numeracion_actual}</b> del Lote activo (stock restante después: {Number(loteActivo.stock_actual) - 1})
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {formBaja.numero_baja && lotesBaja.find((l: any) => Number(l.stock_actual) > 0) && (
+                    <div style={{ background: "#fff3ee", border: "1px solid #FF6B35", borderRadius: "8px", padding: "0.75rem 1rem", fontSize: "0.9rem", color: "#c0392b" }}>
+                      📝 <b>RESUMEN:</b> Se da de baja el N° <b>{formBaja.numero_baja}</b> → se repone con el N° <b>{lotesBaja.find((l: any) => Number(l.stock_actual) > 0)?.numeracion_actual}</b>
                     </div>
                   )}
 
                   <div>
-                    <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / JUSTIFICACIÓN <span style={{ color: "#f44336" }}>*</span></label>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO <span style={{ color: "#f44336" }}>*</span></label>
                     <textarea style={{ ...inputStyle, height: "80px", resize: "vertical" } as any}
                       value={formBaja.motivo || ""}
                       onChange={e => setFormBaja({ ...formBaja, motivo: e.target.value })}
-                      placeholder="ej: Formulario N° 00125 resultó defectuoso, se repone con N° 00150" />
+                      placeholder="ej: Formulario defectuoso, error de impresión..." />
                   </div>
                 </div>
                 <button onClick={registrarBaja} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#FF6B35", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
