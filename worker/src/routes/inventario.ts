@@ -106,4 +106,55 @@ route.post("/retirar-lote", async (c) => {
   }
 });
 
+// Baja y reposicion: item vendido dañado, se repone con el siguiente del stock
+route.post("/baja-reposicion", async (c) => {
+  try {
+    const { item_id, motivo, usuario_id } = await c.req.json();
+    if (!item_id || !motivo?.trim()) return c.json({ error: "item_id y motivo requeridos" }, 400);
+    // Descontar 1 del lote activo mas antiguo (FIFO)
+    const loteR = await query(c.env,
+      "SELECT * FROM item_lotes WHERE item_id = ? AND activo = 1 AND stock_actual > 0 ORDER BY created_at ASC LIMIT 1",
+      [item_id]);
+    if (!loteR.rows.length) return c.json({ error: "No hay stock disponible para reponer" }, 400);
+    const lote = loteR.rows[0];
+    const nuevoStock = Number(lote.stock_actual) - 1;
+    if (nuevoStock <= 0) {
+      await query(c.env, "UPDATE item_lotes SET stock_actual = 0, activo = 0 WHERE id = ?", [lote.id]);
+    } else {
+      await query(c.env, "UPDATE item_lotes SET stock_actual = stock_actual - 1, numeracion_actual = numeracion_actual + 1 WHERE id = ?", [lote.id]);
+    }
+    await query(c.env,
+      "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'baja_reposicion', 1, ?, ?)",
+      [item_id, motivo, usuario_id]);
+    const stockTotal = await query(c.env, "SELECT COALESCE(SUM(stock_actual),0) as total FROM item_lotes WHERE item_id = ? AND activo = 1", [item_id]);
+    await query(c.env, "UPDATE items SET stock_actual = ? WHERE id = ?", [stockTotal.rows[0].total, item_id]);
+    return c.json({ ok: true });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+// Devolucion: cliente devuelve item, vuelve al stock sin generar ingreso economico
+route.post("/devolucion", async (c) => {
+  try {
+    const { item_id, lote_id, cantidad, motivo, usuario_id } = await c.req.json();
+    if (!item_id || !motivo?.trim() || !cantidad) return c.json({ error: "Faltan campos requeridos" }, 400);
+    // Sumar al lote indicado o al mas reciente activo
+    const loteTarget = lote_id
+      ? await query(c.env, "SELECT * FROM item_lotes WHERE id = ? AND item_id = ?", [lote_id, item_id])
+      : await query(c.env, "SELECT * FROM item_lotes WHERE item_id = ? AND activo = 1 ORDER BY created_at DESC LIMIT 1", [item_id]);
+    if (!loteTarget.rows.length) return c.json({ error: "No se encontró lote para la devolución" }, 400);
+    const lote = loteTarget.rows[0];
+    await query(c.env, "UPDATE item_lotes SET stock_actual = stock_actual + ?, activo = 1 WHERE id = ?", [cantidad, lote.id]);
+    await query(c.env,
+      "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'devolucion', ?, ?, ?)",
+      [item_id, cantidad, motivo, usuario_id]);
+    const stockTotal = await query(c.env, "SELECT COALESCE(SUM(stock_actual),0) as total FROM item_lotes WHERE item_id = ? AND activo = 1", [item_id]);
+    await query(c.env, "UPDATE items SET stock_actual = ? WHERE id = ?", [stockTotal.rows[0].total, item_id]);
+    return c.json({ ok: true });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
 export default route;

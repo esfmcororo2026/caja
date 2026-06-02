@@ -7,11 +7,13 @@ export default function Inventario() {
   const [stock, setStock] = useState<any[]>([]);
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [itemsConNumeracion, setItemsConNumeracion] = useState<any[]>([]);
-  const [tab, setTab] = useState<"stock" | "movimientos" | "nuevo_lote">("stock");
+  const [tab, setTab] = useState<"stock" | "movimientos" | "nuevo_lote" | "bajas">("stock");
   const [formLote, setFormLote] = useState<any>({});
   const [lotesDelItem, setLotesDelItem] = useState<any[]>([]);
   const [accionLote, setAccionLote] = useState<"agregar" | "retirar">("agregar");
   const [formRetiro, setFormRetiro] = useState<any>({});
+  const [accionBaja, setAccionBaja] = useState<"baja_reposicion" | "devolucion">("baja_reposicion");
+  const [formBaja, setFormBaja] = useState<any>({ cantidad: 1 });
   const [desde, setDesde] = useState(new Date().toISOString().split("T")[0]);
   const [hasta, setHasta] = useState(new Date().toISOString().split("T")[0]);
   const hoy = new Date().toISOString().split("T")[0];
@@ -51,6 +53,20 @@ export default function Inventario() {
       setStock(r || []);
       setLotesDelItem((r || []).filter((l: any) => Number(l.item_id) === Number(item_id)));
     }
+  }
+
+  async function registrarBaja() {
+    if (!formBaja.item_id) return alert("Selecciona un item");
+    if (!formBaja.motivo?.trim()) return alert("Debes ingresar el motivo / justificación");
+    if (accionBaja === "devolucion" && (!formBaja.cantidad || formBaja.cantidad < 1)) return alert("Ingresa la cantidad a devolver");
+    if (!confirm(`¿Confirmas registrar esta ${accionBaja === "baja_reposicion" ? "baja y reposición" : "devolución"}?\n\nMotivo: ${formBaja.motivo}`)) return;
+    const endpoint = accionBaja === "baja_reposicion" ? "/inventario/baja-reposicion" : "/inventario/devolucion";
+    const res = await api.post(endpoint, { ...formBaja, usuario_id: user?.id });
+    if (res?.error) return alert("Error: " + res.error);
+    setFormBaja({ cantidad: 1 });
+    loadStock();
+    setMsg(accionBaja === "baja_reposicion" ? "BAJA Y REPOSICIÓN REGISTRADA ✓" : "DEVOLUCIÓN REGISTRADA ✓");
+    setTimeout(() => setMsg(""), 3000);
   }
 
   async function retirarLote() {
@@ -105,6 +121,7 @@ export default function Inventario() {
         <button style={tabStyle("stock")} onClick={() => { setTab("stock"); loadStock(); }}>📦 STOCK ACTUAL</button>
         <button style={tabStyle("movimientos")} onClick={() => { setTab("movimientos"); loadMovimientos(); }}>📋 MOVIMIENTOS</button>
         <button style={tabStyle("nuevo_lote")} onClick={() => setTab("nuevo_lote")}>➕ NUEVO LOTE</button>
+        <button style={tabStyle("bajas")} onClick={() => setTab("bajas")}>⬇️ BAJAS</button>
       </div>
 
       <div style={{ background: "#fff", borderRadius: "0 8px 8px 8px", padding: "1.5rem", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
@@ -201,13 +218,13 @@ export default function Inventario() {
             {/* Resumen del dia */}
             {movimientos.length > 0 && (
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-                {["venta", "ingreso", "retiro", "egreso", "ajuste"].map(tipo => {
+                {["venta", "ingreso", "retiro", "baja_reposicion", "devolucion", "egreso", "ajuste"].map(tipo => {
                   const movsTipo = movimientos.filter(m => m.tipo === tipo);
                   if (!movsTipo.length) return null;
                   const totalUds = movsTipo.reduce((s, m) => s + Number(m.cantidad), 0);
-                  const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], retiro: ["#fafafa", "#546e7a"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
-                  const labels: any = { venta: "VENTAS", ingreso: "INGRESOS", retiro: "RETIROS", egreso: "EGRESOS", ajuste: "AJUSTES" };
-                  const icons: any = { venta: "🛒", ingreso: "📥", retiro: "🚧", egreso: "📤", ajuste: "🔧" };
+                  const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], retiro: ["#fafafa", "#546e7a"], baja_reposicion: ["#fff3ee", "#c0392b"], devolucion: ["#f5eef8", "#6c3483"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
+                  const labels: any = { venta: "VENTAS", ingreso: "INGRESOS", retiro: "RETIROS", baja_reposicion: "BAJAS/REPOS.", devolucion: "DEVOLUCIONES", egreso: "EGRESOS", ajuste: "AJUSTES" };
+                  const icons: any = { venta: "🛒", ingreso: "📥", retiro: "🚧", baja_reposicion: "🔄", devolucion: "↩️", egreso: "📤", ajuste: "🔧" };
                   return (
                     <div key={tipo} style={{ background: colors[tipo][0], color: colors[tipo][1], padding: "0.5rem 1rem", borderRadius: "10px", fontSize: "0.82rem", fontWeight: "bold", lineHeight: "1.5" }}>
                       <div>{icons[tipo]} {labels[tipo]}</div>
@@ -256,10 +273,12 @@ export default function Inventario() {
                       ingreso: { bg: "#e8f5e9", color: "#2e7d32", border: "#81C784", icon: "📥" },
                       egreso:  { bg: "#ffebee", color: "#c62828", border: "#EF9A9A", icon: "📤" },
                       ajuste:  { bg: "#f3e5f5", color: "#6a1b9a", border: "#CE93D8", icon: "🔧" },
-                      retiro:  { bg: "#fafafa", color: "#546e7a", border: "#90A4AE", icon: "🚧" },
+                      retiro:         { bg: "#fafafa",   color: "#546e7a", border: "#90A4AE", icon: "🚧" },
+                      baja_reposicion:{ bg: "#fff3ee",   color: "#c0392b", border: "#FF6B35", icon: "🔄" },
+                      devolucion:     { bg: "#f5eef8",   color: "#6c3483", border: "#8E44AD", icon: "↩️" },
                     };
                     const c = colors[m.tipo] || colors.ajuste;
-                    const signo = (m.tipo === "venta" || m.tipo === "egreso") ? "-" : (m.tipo === "retiro" ? "■" : "+");
+                    const signo = (m.tipo === "venta" || m.tipo === "egreso" || m.tipo === "baja_reposicion") ? "-" : (m.tipo === "retiro" ? "■" : "+");
                     return (
                       <div key={m.id} style={{ display: "grid", gridTemplateColumns: "70px 28px 1fr auto auto auto", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1rem", background: c.bg, borderLeft: `4px solid ${c.border}`, borderRadius: "6px" }}>
                         {/* Hora */}
@@ -423,6 +442,82 @@ export default function Inventario() {
                 </div>
                 <button onClick={retirarLote} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#f44336", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
                   📤 CONFIRMAR RETIRO DE LOTE
+                </button>
+              </>
+            )}
+          </>
+        )}
+        {/* ===== BAJAS ===== */}
+        {tab === "bajas" && (
+          <>
+            {/* Toggle baja_reposicion / devolucion */}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+              <button onClick={() => { setAccionBaja("baja_reposicion"); setFormBaja({ cantidad: 1 }); }}
+                style={{ padding: "0.6rem 1.5rem", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: accionBaja === "baja_reposicion" ? "bold" : "normal", background: accionBaja === "baja_reposicion" ? "#FF6B35" : "#f0f0f0", color: accionBaja === "baja_reposicion" ? "#fff" : "#666" }}>
+                🔄 BAJA Y REPOSICIÓN
+              </button>
+              <button onClick={() => { setAccionBaja("devolucion"); setFormBaja({ cantidad: 1 }); }}
+                style={{ padding: "0.6rem 1.5rem", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: accionBaja === "devolucion" ? "bold" : "normal", background: accionBaja === "devolucion" ? "#8E44AD" : "#f0f0f0", color: accionBaja === "devolucion" ? "#fff" : "#666" }}>
+                ↩️ DEVOLUCIÓN
+              </button>
+            </div>
+
+            {/* ---- BAJA Y REPOSICION ---- */}
+            {accionBaja === "baja_reposicion" && (
+              <>
+                <div style={{ background: "#fff3ee", border: "1px solid #FF6B35", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#c0392b" }}>
+                  🔄 <b>BAJA Y REPOSICIÓN</b>: Un item ya vendido resultó dañado o defectuoso. Se descuenta 1 unidad del stock actual como reposición. <b>No genera movimiento económico.</b>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", maxWidth: "600px" }}>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM A REPONER</label>
+                    <select style={inputStyle} value={formBaja.item_id || ""} onChange={e => setFormBaja({ ...formBaja, item_id: Number(e.target.value) })}>
+                      <option value="">Seleccionar item...</option>
+                      {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / JUSTIFICACIÓN <span style={{ color: "#f44336" }}>*</span></label>
+                    <textarea style={{ ...inputStyle, height: "80px", resize: "vertical" } as any}
+                      value={formBaja.motivo || ""}
+                      onChange={e => setFormBaja({ ...formBaja, motivo: e.target.value })}
+                      placeholder="ej: Formulario vendido al Sr. [nombre] resultó defectuoso, se repone con el siguiente" />
+                  </div>
+                </div>
+                <button onClick={registrarBaja} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#FF6B35", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+                  🔄 REGISTRAR BAJA Y REPOSICIÓN
+                </button>
+              </>
+            )}
+
+            {/* ---- DEVOLUCION ---- */}
+            {accionBaja === "devolucion" && (
+              <>
+                <div style={{ background: "#f5eef8", border: "1px solid #8E44AD", borderRadius: "8px", padding: "0.75rem 1rem", marginBottom: "1.25rem", fontSize: "0.85rem", color: "#6c3483" }}>
+                  ↩️ <b>DEVOLUCIÓN</b>: El cliente devuelve un item. Este vuelve al stock disponible. <b>No genera ingreso económico.</b>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", maxWidth: "600px" }}>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>ITEM DEVUELTO</label>
+                    <select style={inputStyle} value={formBaja.item_id || ""} onChange={e => setFormBaja({ ...formBaja, item_id: Number(e.target.value) })}>
+                      <option value="">Seleccionar item...</option>
+                      {itemsConNumeracion.map(i => <option key={i.id} value={i.id}>{i.nombre} — {i.codigo_nombre || "sin código"}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>CANTIDAD A DEVOLVER</label>
+                    <input type="number" min="1" style={inputStyle} value={formBaja.cantidad || 1} onChange={e => setFormBaja({ ...formBaja, cantidad: Number(e.target.value) })} />
+                  </div>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#666" }}>MOTIVO / JUSTIFICACIÓN <span style={{ color: "#f44336" }}>*</span></label>
+                    <textarea style={{ ...inputStyle, height: "80px", resize: "vertical" } as any}
+                      value={formBaja.motivo || ""}
+                      onChange={e => setFormBaja({ ...formBaja, motivo: e.target.value })}
+                      placeholder="ej: Cliente devuelve formulario porque se equivocó de tramite" />
+                  </div>
+                </div>
+                <button onClick={registrarBaja} style={{ marginTop: "1rem", padding: "0.75rem 2rem", background: "#8E44AD", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}>
+                  ↩️ REGISTRAR DEVOLUCIÓN
                 </button>
               </>
             )}
