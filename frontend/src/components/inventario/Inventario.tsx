@@ -201,13 +201,13 @@ export default function Inventario() {
             {/* Resumen del dia */}
             {movimientos.length > 0 && (
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-                {["venta", "ingreso", "egreso", "ajuste"].map(tipo => {
+                {["venta", "ingreso", "retiro", "egreso", "ajuste"].map(tipo => {
                   const movsTipo = movimientos.filter(m => m.tipo === tipo);
                   if (!movsTipo.length) return null;
                   const totalUds = movsTipo.reduce((s, m) => s + Number(m.cantidad), 0);
-                  const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
-                  const labels: any = { venta: "VENTAS", ingreso: "INGRESOS", egreso: "EGRESOS", ajuste: "AJUSTES" };
-                  const icons: any = { venta: "🛒", ingreso: "📥", egreso: "📤", ajuste: "🔧" };
+                  const colors: any = { venta: ["#fff3e0", "#e65100"], ingreso: ["#e8f5e9", "#2e7d32"], retiro: ["#fafafa", "#546e7a"], egreso: ["#ffebee", "#c62828"], ajuste: ["#f3e5f5", "#6a1b9a"] };
+                  const labels: any = { venta: "VENTAS", ingreso: "INGRESOS", retiro: "RETIROS", egreso: "EGRESOS", ajuste: "AJUSTES" };
+                  const icons: any = { venta: "🛒", ingreso: "📥", retiro: "🚧", egreso: "📤", ajuste: "🔧" };
                   return (
                     <div key={tipo} style={{ background: colors[tipo][0], color: colors[tipo][1], padding: "0.5rem 1rem", borderRadius: "10px", fontSize: "0.82rem", fontWeight: "bold", lineHeight: "1.5" }}>
                       <div>{icons[tipo]} {labels[tipo]}</div>
@@ -256,9 +256,10 @@ export default function Inventario() {
                       ingreso: { bg: "#e8f5e9", color: "#2e7d32", border: "#81C784", icon: "📥" },
                       egreso:  { bg: "#ffebee", color: "#c62828", border: "#EF9A9A", icon: "📤" },
                       ajuste:  { bg: "#f3e5f5", color: "#6a1b9a", border: "#CE93D8", icon: "🔧" },
+                      retiro:  { bg: "#fafafa", color: "#546e7a", border: "#90A4AE", icon: "🚧" },
                     };
                     const c = colors[m.tipo] || colors.ajuste;
-                    const signo = (m.tipo === "venta" || m.tipo === "egreso") ? "-" : "+";
+                    const signo = (m.tipo === "venta" || m.tipo === "egreso") ? "-" : (m.tipo === "retiro" ? "■" : "+");
                     return (
                       <div key={m.id} style={{ display: "grid", gridTemplateColumns: "70px 28px 1fr auto auto auto", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1rem", background: c.bg, borderLeft: `4px solid ${c.border}`, borderRadius: "6px" }}>
                         {/* Hora */}

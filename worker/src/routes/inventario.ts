@@ -87,12 +87,17 @@ route.post("/retirar-lote", async (c) => {
   try {
     const { lote_id, item_id, motivo, usuario_id } = await c.req.json();
     if (!lote_id || !motivo?.trim()) return c.json({ error: "lote_id y motivo requeridos" }, 400);
-    const lote = await query(c.env, "SELECT * FROM item_lotes WHERE id = ?", [lote_id]);
-    if (!lote.rows.length) return c.json({ error: "Lote no encontrado" }, 404);
+    const lote = await query(c.env, "SELECT * FROM item_lotes WHERE id = ? AND activo = 1 AND stock_actual > 0", [lote_id]);
+    if (!lote.rows.length) return c.json({ error: "Lote no encontrado o sin stock" }, 404);
     const stock = lote.rows[0].stock_actual;
+    // Solo desactivar el lote - sin tocar ventas ni ingresos
     await query(c.env, "UPDATE item_lotes SET activo = 0 WHERE id = ?", [lote_id]);
-    await query(c.env, "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'egreso', ?, ?, ?)",
-      [item_id, stock, `RETIRO DE LOTE: ${motivo}`, usuario_id]);
+    // Registrar como 'retiro' - tipo exclusivo, no confundible con venta ni egreso economico
+    await query(c.env,
+      "INSERT INTO inventario_movimientos (item_id, tipo, cantidad, motivo, usuario_id) VALUES (?, 'retiro', ?, ?, ?)",
+      [item_id, stock, motivo, usuario_id]
+    );
+    // Recalcular stock total del item
     const stockTotal = await query(c.env, "SELECT COALESCE(SUM(stock_actual),0) as total FROM item_lotes WHERE item_id = ? AND activo = 1", [item_id]);
     await query(c.env, "UPDATE items SET stock_actual = ? WHERE id = ?", [stockTotal.rows[0].total, item_id]);
     return c.json({ ok: true });
