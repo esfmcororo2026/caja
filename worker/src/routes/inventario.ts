@@ -33,7 +33,7 @@ route.get("/movimientos", async (c) => {
     FROM inventario_movimientos m
     JOIN items i ON m.item_id = i.id
     JOIN usuarios u ON m.usuario_id = u.id
-    WHERE date(m.fecha) BETWEEN ? AND ?
+    WHERE date(datetime(m.fecha, '-4 hours')) BETWEEN ? AND ?
     ORDER BY m.fecha DESC
   `, [desde || "2000-01-01", hasta || "2099-12-31"]);
   return c.json(r.rows);

@@ -15,9 +15,10 @@ export default function Inventario() {
   const [accionBaja, setAccionBaja] = useState<"baja_reposicion" | "devolucion">("baja_reposicion");
   const [formBaja, setFormBaja] = useState<any>({ cantidad: 1 });
   const [lotesBaja, setLotesBaja] = useState<any[]>([]);
-  const [desde, setDesde] = useState(new Date().toISOString().split("T")[0]);
-  const [hasta, setHasta] = useState(new Date().toISOString().split("T")[0]);
-  const hoy = new Date().toISOString().split("T")[0];
+  const fechaLocal = () => new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const [desde, setDesde] = useState(fechaLocal);
+  const [hasta, setHasta] = useState(fechaLocal);
+  const hoy = fechaLocal();
   const [msg, setMsg] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [busquedaMov, setBusquedaMov] = useState("");
@@ -292,9 +293,12 @@ export default function Inventario() {
               return (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                   {filtrados.map(m => {
-                    const hora = m.fecha?.includes("T")
-                      ? m.fecha.split("T")[1]?.slice(0, 8)
-                      : m.fecha?.slice(11, 19) || "--:--:--";
+                    const hora = (() => {
+                      if (!m.fecha) return "--:--:--";
+                      const raw = m.fecha.includes("T") ? m.fecha : m.fecha.replace(" ", "T");
+                      const d = new Date(raw.endsWith("Z") ? raw : raw + "Z");
+                      return new Date(d.getTime() - 4 * 60 * 60 * 1000).toISOString().slice(11, 19);
+                    })();
                     const colors: any = {
                       venta:   { bg: "#fff3e0", color: "#e65100", border: "#FFB74D", icon: "🛒" },
                       ingreso: { bg: "#e8f5e9", color: "#2e7d32", border: "#81C784", icon: "📥" },
