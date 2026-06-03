@@ -88,7 +88,12 @@ export default function Inventario() {
       : `Rango: ${formBaja.numeracion_desde} al ${formBaja.numeracion_hasta} (${formBaja.cantidad} unidades)`;
     if (!confirm(`¿Confirmas registrar esta ${accionBaja === "baja_reposicion" ? "baja y reposición" : "devolución"}?\n\n${resumen}\n\nMotivo: ${formBaja.motivo}`)) return;
     const endpoint = accionBaja === "baja_reposicion" ? "/inventario/baja-reposicion" : "/inventario/devolucion";
-    const res = await api.post(endpoint, { ...formBaja, usuario_id: user?.id });
+    let res;
+    try {
+      res = await api.post(endpoint, { ...formBaja, usuario_id: user?.id });
+    } catch (e: any) {
+      return alert("Error: " + (e.message || "Error desconocido"));
+    }
     if (res?.error) return alert("Error: " + res.error);
     setFormBaja({ cantidad: 1 });
     setLotesBaja([]);
