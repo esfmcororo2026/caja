@@ -114,8 +114,14 @@ route.post("/baja-reposicion", async (c) => {
 
     // Validar que el número de baja fue realmente vendido
     const ventaR = await query(c.env,
-      "SELECT dv.* FROM detalle_ventas dv JOIN ventas v ON dv.venta_id = v.id WHERE dv.item_id = ? AND ? BETWEEN dv.numeracion_desde AND dv.numeracion_hasta LIMIT 1",
-      [item_id, numero_baja]
+      `SELECT dv.* FROM detalle_ventas dv 
+       WHERE dv.item_id = ? 
+       AND dv.numeracion_desde IS NOT NULL 
+       AND dv.numeracion_hasta IS NOT NULL 
+       AND CAST(? AS INTEGER) >= CAST(dv.numeracion_desde AS INTEGER) 
+       AND CAST(? AS INTEGER) <= CAST(dv.numeracion_hasta AS INTEGER) 
+       LIMIT 1`,
+      [item_id, numero_baja, numero_baja]
     );
     if (!ventaR.rows.length) return c.json({ error: `El N° ${numero_baja} no corresponde a ninguna venta registrada de este item` }, 400);
 
